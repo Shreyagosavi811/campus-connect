@@ -1,0 +1,55 @@
+:root {
+    /* --- COLORS --- */
+    --primary-color: #2563EB;      /* Bright Blue */
+    --secondary-color: #10B981;    /* Teal Green */
+    --accent-color: #FBBF24;       /* Warm Yellow */
+    --text-color: #111827;         /* Dark Gray */
+    --background-color: #F3F4F6;   /* Light Gray */
+    --card-bg: #FFFFFF;
+    --border-color: #E5E7EB;
+
+    /* --- FONT OPTIMIZATION --- */
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+
+    /* Global background gradient */
+    /*background: linear-gradient(90deg, var(--primary-color) 0%, var(--secondary-color) 100%);*/
+    color: var(--text-color);
+}
+
+/* --- DARK MODE --- */
+[data-theme="dark"] {
+    --primary-color: #38BDF8;
+    --secondary-color: #10B981;
+    --accent-color: #F59E0B;
+    --text-color: #E2E8F0;
+    --background-color: #0F172A;
+    --card-bg: #1E293B;
+    --border-color: #334155;
+}
+
+/* Base link and hover */
+a {
+    color: var(--primary-color);
+    transition: color 0.3s ease;
+}
+
+a:hover {
+    color: var(--accent-color);
+}
+
+/* Base button style */
+button {
+    padding: 0.6em 1.2em;
+    font-weight: 500;
+    background-color: var(--primary-color);
+    color: white;
+    transition: all 0.25s ease;
+}
+
+button:hover {
+    background-color: var(--secondary-color);
+    border-color: var(--accent-color);
+}

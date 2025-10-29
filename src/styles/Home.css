@@ -1,0 +1,218 @@
+/* 🌗 THEME VARIABLES */
+:root {
+  --primary-color: #2a7ae4;
+  --secondary-color: #1e90ff;
+  --text-color: #333;
+  --card-bg: #ffffff;
+  --background-color: #f8f9fa;
+}
+
+[data-theme="dark"] {
+  --primary-color: #90caf9;
+  --secondary-color: #42a5f5;
+  --text-color: #e0e0e0;
+  --card-bg: #1e1e1e;
+  --background-color: #121212;
+}
+
+/* Container */
+.home-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  animation: fadeIn 0.8s ease-in-out;
+  background-color: var(--background-color);
+  transition: background-color 0.3s ease;
+}
+
+/* Welcome Message */
+.home-container .welcome {
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  text-align: center;
+  letter-spacing: 0.5px;
+  animation: slideInDown 0.8s ease;
+}
+
+/* Subtitle / Description */
+.home-container .subtitle {
+  font-size: 1.15rem;
+  color: var(--text-color);
+  text-align: center;
+  opacity: 0.85;
+  animation: slideInUp 0.8s ease;
+}
+
+/* Sections / Cards container */
+.home-sections {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+  gap: 1.8rem;
+  justify-items: center;
+}
+
+/* Individual Section Card */
+.home-card {
+  background: var(--card-bg);
+  border-radius: 14px;
+  padding: 1.8rem 1.5rem;
+  width: 100%;
+  max-width: 320px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  transition: transform 0.35s ease, box-shadow 0.35s ease, background 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.home-card:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+  background: linear-gradient(145deg, var(--card-bg), var(--background-color));
+}
+
+/* Card Title */
+.home-card h3 {
+  margin-bottom: 0.8rem;
+  color: var(--primary-color);
+  font-size: 1.3rem;
+  font-weight: 600;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  position: relative;
+}
+
+/* 🔴 Notification Dot */
+.notification-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  background-color: #ff4d4d;
+  border-radius: 50%;
+  margin-left: 8px;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.9);
+    opacity: 0.7;
+  }
+}
+
+
+/* Card Description */
+.home-card p {
+  font-size: 0.95rem;
+  color: var(--text-color);
+  opacity: 0.9;
+  line-height: 1.4;
+  text-align: center;
+}
+
+/* Buttons inside cards */
+.home-card button {
+  margin-top: 1.2rem;
+  background-color: var(--secondary-color);
+  color: white;
+  font-weight: 500;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.home-card button:hover {
+  background-color: var(--primary-color);
+  transform: scale(1.05);
+}
+
+/* ✨ Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+  to {
+    opacity: 1;
+    background-color: var(--background-color);
+  }
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.9);
+    opacity: 0.8;
+  }
+}
+
+/* 📱 Responsive adjustments */
+@media (max-width: 768px) {
+  .home-container {
+    margin: 1rem;
+    padding: 0 0.5rem;
+  }
+
+  .home-container .welcome {
+    font-size: 1.8rem;
+  }
+
+  .home-container .subtitle {
+    font-size: 1rem;
+  }
+
+  .home-card {
+    padding: 1.4rem 1rem;
+  }
+
+  .home-card h3 {
+    font-size: 1.15rem;
+  }
+}

@@ -1,0 +1,35 @@
+/* index.css - minimal resets and base styles */
+html, body, #root {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    font-weight: 400;
+    display: flex;
+    place-items: center;
+    width: 100%;
+    min-height: 100vh;
+    background-color: var(--background-color); /* from global.css */
+    color: var(--text-color); /* from global.css */
+}
+
+h1, h2, h3, h4, h5, h6 {
+    margin: 0;
+}
+
+a {
+    text-decoration: none;
+    font-weight: 500;
+}
+
+button {
+    font-family: inherit;
+    cursor: pointer;
+    border-radius: 8px;
+    border: 1px solid transparent;
+}
