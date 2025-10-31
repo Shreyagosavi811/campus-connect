@@ -1,17 +1,33 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 
-// Create AuthContext
 const AuthContext = createContext();
 
-// Custom hook to use AuthContext
 export const useAuth = () => useContext(AuthContext);
 
-// Provider component
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null); // store logged-in user
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Load user from localStorage (or backend) on app start
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+    setLoading(false);
+  }, []);
+
+  // Save user in localStorage when logged in
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem("user", JSON.stringify(user));
+    } else {
+      localStorage.removeItem("user");
+    }
+  }, [user]);
 
   return (
-    <AuthContext.Provider value={{ user, setUser }}>
+    <AuthContext.Provider value={{ user, setUser, loading }}>
       {children}
     </AuthContext.Provider>
   );

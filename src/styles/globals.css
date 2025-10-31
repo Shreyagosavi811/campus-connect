@@ -53,3 +53,15 @@ button:hover {
     background-color: var(--secondary-color);
     border-color: var(--accent-color);
 }
+.MuiFormControl-root {
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+  .MuiSelect-select {
+    font-size: 0.95rem !important;
+    padding: 10px !important;
+  }
+}
+

@@ -2,16 +2,14 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export default function PrivateRoute({ allowedRoles, children }) {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
 
-  if (!user) {
-    // Not logged in
-    return <Navigate to="/" />;
-  }
+  if (loading) return <div>Loading...</div>;
+
+  if (!user) return <Navigate to="/" replace />;
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    // Logged in but not authorized
-    return <Navigate to="/home" />;
+    return <Navigate to="/home" replace />;
   }
 
   return children;

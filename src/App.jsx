@@ -11,7 +11,6 @@ import AdminDashboard from "./pages/AdminDashboard";
 import HodDashboard from "./pages/HodDashboard";
 import TeacherDashboard from "./pages/TeacherDashboard";
 
-
 import AdminUserManagement from "./pages/AdminUserManagement";
 import HODUserManagement from "./pages/HODUserManagement";
 import TeacherUserManagement from "./pages/TeacherUserManagement";
@@ -22,7 +21,7 @@ import LostItemsList from "./components/LostItemsList";
 import FoundItemForm from "./components/FoundItemForm";
 import FoundItemsList from "./components/FoundItemsList";
 
-//Quries
+// Queries
 import QueriesPage from "./pages/QueriesPage";
 
 export default function App() {
@@ -41,7 +40,7 @@ export default function App() {
           <Route
             path="/notices"
             element={
-              <PrivateRoute allowedRoles={["admin", "hod", "teacher", "student"]}>
+              <PrivateRoute allowedRoles={["admin", "HOD", "Teacher", "Student"]}>
                 <NoticeBoard />
               </PrivateRoute>
             }
@@ -49,22 +48,33 @@ export default function App() {
 
           {/* Lost & Found accessible to all logged-in users */}
           <Route
-  path="/lostfound"
-  element={
-    <PrivateRoute allowedRoles={["admin","hod","teacher","student"]}>
-      <LostFoundPage />
-    </PrivateRoute>
+            path="/lostfound"
+            element={
+              <PrivateRoute allowedRoles={["admin", "HOD", "Teacher", "Student"]}>
+                <LostFoundPage />
+              </PrivateRoute>
             }
           />
-          <Route path="/queries" element={<QueriesPage />} />
+
+          {/* Queries accessible to all logged-in users */}
+          <Route
+            path="/queries"
+            element={
+              <PrivateRoute allowedRoles={["admin", "HOD", "Teacher", "Student"]}>
+                <QueriesPage />
+              </PrivateRoute>
+            }
+          />
 
           {/* Admin Panel */}
           <Route
             path="/admin"
             element={
               <PrivateRoute allowedRoles={["admin"]}>
-                <AdminDashboard />
-                <AdminUserManagement />
+                <>
+                  <AdminDashboard />
+                  <AdminUserManagement />
+                </>
               </PrivateRoute>
             }
           />
@@ -73,9 +83,11 @@ export default function App() {
           <Route
             path="/hod"
             element={
-              <PrivateRoute allowedRoles={["hod"]}>
-                <HodDashboard />
-                <HODUserManagement />
+              <PrivateRoute allowedRoles={["HOD"]}>
+                <>
+                  <HodDashboard />
+                  <HODUserManagement />
+                </>
               </PrivateRoute>
             }
           />
@@ -84,18 +96,16 @@ export default function App() {
           <Route
             path="/teacher"
             element={
-              <PrivateRoute allowedRoles={["teacher"]}>
-                <TeacherDashboard />
-                <TeacherUserManagement />
+              <PrivateRoute allowedRoles={["Teacher"]}>
+                <>
+                  <TeacherDashboard />
+                  <TeacherUserManagement />
+                </>
               </PrivateRoute>
             }
           />
-
-          
-          
         </Routes>
       </Router>
     </AuthProvider>
   );
-  
 }

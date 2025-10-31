@@ -83,7 +83,7 @@ export default function Home() {
           </div>
 
           {/* Events */}
-          <div className="home-card" onClick={() => handleNavigation("events", "/events")}>
+          <div className="home-card" onClick={() => handleNavigation("events", "/notices")}>
             <h3>Events</h3>
             <p>Discover upcoming workshops, seminars, and cultural events.</p>
             <button>View Events</button>
@@ -100,7 +100,7 @@ export default function Home() {
           </div>
 
           {/* Mentorship */}
-          <div className="home-card" onClick={() => handleNavigation("mentorship", "/Mentorship")}>
+          <div className="home-card" onClick={() => handleNavigation("mentorship", "/queries")}>
             <h3>
               Mentorship{" "}
               {notifications.mentorship && <span className="notification-dot" />}

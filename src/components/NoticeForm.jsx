@@ -4,7 +4,7 @@ import { collection, addDoc, serverTimestamp, doc, getDoc, query, where, getDocs
 import { TextField, Button, MenuItem, Box, Paper, Typography, LinearProgress, Snackbar } from "@mui/material";
 import { useAuth } from "../context/AuthContext";
 import "../styles/NoticeBoard.css";
-
+import { FormControl, InputLabel, Select } from "@mui/material";
 const categories = ["Exam", "Placement", "Cultural", "Other"];
 const departments = ["All", "Computer Engineering", "Electrical Engineering", "Civil Engineering", "Mechanical Engineering"];
 const years = ["All", "1st", "2nd", "3rd", "4th"];
@@ -135,28 +135,110 @@ export default function NoticeForm({ onAdded }) {
           onChange={(e) => setDescription(e.target.value)}
         />
 
-        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
-          <TextField select label="Category" value={category} onChange={(e) => setCategory(e.target.value)} fullWidth sx={{ flex: 1 }}>
-            {categories.map((cat) => (
-              <MenuItem key={cat} value={cat}>{cat}</MenuItem>
-            ))}
-          </TextField>
+        <Box
+  sx={{
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 2,
+    justifyContent: "center",
+    alignItems: "center",
+    "@media (max-width: 768px)": {
+      flexDirection: "column",
+      gap: 1.5,
+    },
+  }}
+>
+  <FormControl sx={{ flex: 1, minWidth: { xs: "100%", sm: "30%" } }}>
+    <TextField
+      select
+      label="Category"
+      value={category}
+      onChange={(e) => setCategory(e.target.value)}
+      fullWidth
+      size="small"
+      sx={{
+        backgroundColor: "rgba(255,255,255,0.95)",
+        borderRadius: 2,
+        "& .MuiOutlinedInput-notchedOutline": {
+          borderColor: "#cbd5e1",
+        },
+        "&:hover .MuiOutlinedInput-notchedOutline": {
+          borderColor: "#9333ea",
+        },
+        "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+          borderColor: "#9333ea",
+          boxShadow: "0 0 0 3px rgba(147, 51, 234, 0.2)",
+        },
+      }}
+    >
+      {categories.map((cat) => (
+        <MenuItem key={cat} value={cat}>{cat}</MenuItem>
+      ))}
+    </TextField>
+  </FormControl>
 
-          <TextField select label="Department" value={department} onChange={(e) => setDepartment(e.target.value)} fullWidth sx={{ flex: 1 }}>
-            {departments.map((dep) => (
-              <MenuItem key={dep} value={dep}>{dep}</MenuItem>
-            ))}
-          </TextField>
+  <FormControl sx={{ flex: 1, minWidth: { xs: "100%", sm: "30%" } }}>
+    <TextField
+      select
+      label="Department"
+      value={department}
+      onChange={(e) => setDepartment(e.target.value)}
+      fullWidth
+      size="small"
+      sx={{
+        backgroundColor: "rgba(255,255,255,0.95)",
+        borderRadius: 2,
+        "& .MuiOutlinedInput-notchedOutline": {
+          borderColor: "#cbd5e1",
+        },
+        "&:hover .MuiOutlinedInput-notchedOutline": {
+          borderColor: "#9333ea",
+        },
+        "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+          borderColor: "#9333ea",
+          boxShadow: "0 0 0 3px rgba(147, 51, 234, 0.2)",
+        },
+      }}
+    >
+      {departments.map((dep) => (
+        <MenuItem key={dep} value={dep}>{dep}</MenuItem>
+      ))}
+    </TextField>
+  </FormControl>
 
-          <TextField select label="Year" value={year} onChange={(e) => setYear(e.target.value)} fullWidth sx={{ flex: 1 }}>
-            {years.map((y) => (
-              <MenuItem key={y} value={y}>{y}</MenuItem>
-            ))}
-          </TextField>
-        </Box>
+  <FormControl sx={{ flex: 1, minWidth: { xs: "100%", sm: "30%" } }}>
+    <TextField
+      select
+      label="Year"
+      value={year}
+      onChange={(e) => setYear(e.target.value)}
+      fullWidth
+      size="small"
+      sx={{
+        backgroundColor: "rgba(255,255,255,0.95)",
+        borderRadius: 2,
+        "& .MuiOutlinedInput-notchedOutline": {
+          borderColor: "#cbd5e1",
+        },
+        "&:hover .MuiOutlinedInput-notchedOutline": {
+          borderColor: "#9333ea",
+        },
+        "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+          borderColor: "#9333ea",
+          boxShadow: "0 0 0 3px rgba(147, 51, 234, 0.2)",
+        },
+      }}
+    >
+      {years.map((y) => (
+        <MenuItem key={y} value={y}>{y}</MenuItem>
+      ))}
+    </TextField>
+  </FormControl>
+</Box>
+
 
         <div className="upload-section">
-          <Button variant="outlined" component="label" color="secondary">
+          <Button variant="outlined" component="label" color="secondary"  >
             {image ? "Change Image" : "Upload Image"}
             <input type="file" hidden accept="image/*" onChange={(e) => setImage(e.target.files[0])} />
           </Button>

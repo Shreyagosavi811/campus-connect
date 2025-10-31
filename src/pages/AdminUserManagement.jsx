@@ -124,6 +124,13 @@ const handleAdd = async () => {
     await updateDoc(doc(db, "users", user.id), { approved: true });
     fetchUsers();
   };
+  // Delete user
+  const handleDelete = async (id) => {
+    if (window.confirm("Are you sure you want to delete this user?")) {
+      await deleteDoc(doc(db, "users", id));
+      fetchUsers();
+    }
+  };
 
   const handleTabChange = (event, newValue) => setTabIndex(newValue);
 
@@ -190,9 +197,7 @@ const handleAdd = async () => {
                 fullWidth
                 sx={{ mb: 2 }}
               >
-                <MenuItem value="" disabled>
-                  Select Year
-                </MenuItem>
+                <MenuItem value="" disabled>Select Year</MenuItem>
                 <MenuItem value="1">1st Year</MenuItem>
                 <MenuItem value="2">2nd Year</MenuItem>
                 <MenuItem value="3">3rd Year</MenuItem>

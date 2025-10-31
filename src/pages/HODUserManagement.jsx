@@ -60,21 +60,27 @@ const handleAddUser = async () => {
     createdAt: new Date().toISOString(),
   });
 
-  emailjs.send(
-    "YOUR_SERVICE_ID",
-    "YOUR_TEMPLATE_ID",
-    {
-      name: form.name,
-      email: form.email,
-      password,
-      department: user.department,
-    },
-    "YOUR_PUBLIC_KEY"
-  );
+  // ✅ Send email with credentials
+  const templateParams = {
+    name: form.name,
+    email: form.email,
+    password,
+  };
 
-  alert(`Student added and email sent to ${form.email}`);
-  setForm({ name: "", email: "", year: "" });
-};
+  emailjs
+    .send("service_ydtu7jp", "template_etypntv", templateParams, "NN3gMWSv34ggrAvsV")
+    .then(
+      () => {
+        alert(`✅ User added and email sent to ${form.email}`);
+      },
+      (error) => {
+        console.error("❌ Failed to send email:", error);
+        alert("User added but email could not be sent.");
+      }
+    );
+  setForm({ name: "", email: "", role: "student", year: "" });
+  fetchUsers();
+};  
 
 
   // Update user
