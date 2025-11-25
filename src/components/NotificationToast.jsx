@@ -1,4 +1,4 @@
-// src/components/NotificationToast.jsx
+
 import React from "react";
 import "../styles/queries.css";
 

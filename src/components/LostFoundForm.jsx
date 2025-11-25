@@ -23,7 +23,7 @@ export default function LostFoundForm({ userData, onAdded }) {
       await uploadBytes(storageRef, file);
       const imageURL = await getDownloadURL(storageRef);
 
-      // Save metadata to Firestore
+      
       await addDoc(collection(db, "lostFoundItems"), {
         title,
         description,

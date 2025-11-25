@@ -1,15 +1,15 @@
-// src/components/QueryCard.jsx
+
 import React, { useEffect, useState } from "react";
 import { doc, collection, onSnapshot, query, orderBy, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import AnswerSection from "./AnswerSection";
 
 export default function QueryCard({ query: queryData, onNotify }) {
-  // If queryData is undefined or invalid, don't render anything
+
   if (!queryData || typeof queryData !== "object") return null;
 
   const { id, title, description, category, postedBy, date_posted, status } = queryData;
-  if (!id) return null; // still invalid? don't render
+  if (!id) return null;
 
   const [replies, setReplies] = useState([]);
   const [localStatus, setLocalStatus] = useState(status || "open");

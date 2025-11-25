@@ -10,6 +10,10 @@ import {
   Box,
   Alert,
   CircularProgress,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import NoticeForm from "../components/NoticeForm";
 import "../styles/NoticeBoard.css";
@@ -17,12 +21,16 @@ import "../styles/NoticeBoard.css";
 export default function NoticeBoard() {
   const { user } = useAuth();
   const [notices, setNotices] = useState([]);
+  const [filteredNotices, setFilteredNotices] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Filters
+  const [selectedDept, setSelectedDept] = useState("All");
+  const [selectedYear, setSelectedYear] = useState("All");
 
   const fetchNotices = async () => {
     setLoading(true);
     try {
-      // 🔹 Fetch from Firestore
       const q = query(collection(db, "notices"), orderBy("timestamp", "desc"));
       const snapshot = await getDocs(q);
 
@@ -31,7 +39,6 @@ export default function NoticeBoard() {
         ...doc.data(),
       }));
 
-      // 🔹 Ensure defaults for missing fields
       data = data.map((n) => ({
         title: n.title || "Untitled Notice",
         description: n.description || "No description provided.",
@@ -46,6 +53,7 @@ export default function NoticeBoard() {
       }));
 
       setNotices(data);
+      setFilteredNotices(data); // initial load
     } catch (err) {
       console.error("❌ Error fetching notices:", err);
     }
@@ -55,6 +63,21 @@ export default function NoticeBoard() {
   useEffect(() => {
     fetchNotices();
   }, []);
+
+  // 🔍 Filter Logic
+  useEffect(() => {
+    let filtered = [...notices];
+
+    if (selectedDept !== "All") {
+      filtered = filtered.filter((n) => n.department === selectedDept);
+    }
+
+    if (selectedYear !== "All") {
+      filtered = filtered.filter((n) => n.year === selectedYear.toString());
+    }
+
+    setFilteredNotices(filtered);
+  }, [selectedDept, selectedYear, notices]);
 
   if (loading)
     return (
@@ -73,20 +96,59 @@ export default function NoticeBoard() {
         📢 Notice Board
       </Typography>
 
-      {/* 🔹 Show form only for teachers/admins */}
+      {/* 🧑‍🏫 Teachers/HOD/Admin can post */}
       {["admin", "hod", "teacher"].includes(user?.role) && (
         <Box className="notice-form">
           <NoticeForm onAdded={fetchNotices} />
         </Box>
       )}
 
-      <Box className="notices-section">
-        <Typography component="h5" sx={{ mb: 2 }}>
-          Posted Notices
-        </Typography>
+      {/* 🔽 Filters Section */}
+      <Box
+        sx={{
+          display: "flex",
+          gap: 2,
+          mb: 3,
+          flexWrap: "wrap",
+        }}
+      >
+        {/* Department Filter */}
+        <FormControl sx={{ minWidth: 180 }}>
+          <InputLabel>Department</InputLabel>
+          <Select
+            value={selectedDept}
+            label="Department"
+            onChange={(e) => setSelectedDept(e.target.value)}
+          >
+            <MenuItem value="All">All Departments</MenuItem>
+            <MenuItem value="Computer Engineering">Computer Engineering</MenuItem>
+            <MenuItem value="Electrical Engineering">Electrical  Engineering</MenuItem>
+            <MenuItem value="Mechanical Engineering">Mechanical  Engineering</MenuItem>
+            <MenuItem value="Civil Engineering">Civil  Engineering</MenuItem>
+          </Select>
+        </FormControl>
 
-        {notices.length === 0 ? (
-          <Alert severity="info">No notices available.</Alert>
+        {/* Year Filter */}
+        <FormControl sx={{ minWidth: 150 }}>
+          <InputLabel>Year</InputLabel>
+          <Select
+            value={selectedYear}
+            label="Year"
+            onChange={(e) => setSelectedYear(e.target.value)}
+          >
+            <MenuItem value="All">All Years</MenuItem>
+            <MenuItem value="1">1st Year</MenuItem>
+            <MenuItem value="2">2nd Year</MenuItem>
+            <MenuItem value="3">3rd Year</MenuItem>
+            <MenuItem value="4">4th Year</MenuItem>
+          </Select>
+        </FormControl>
+      </Box>
+
+      {/* 📌 Notices */}
+      <Box className="notices-section">
+        {filteredNotices.length === 0 ? (
+          <Alert severity="info">No notices found for selected filters.</Alert>
         ) : (
           <Box
             className="notices-grid"
@@ -96,12 +158,10 @@ export default function NoticeBoard() {
               gap: 2,
             }}
           >
-            {notices.map((n) => (
-              <Card key={n.id} className="MuiCard-root" sx={{ borderRadius: 2 }}>
-                {/* ✅ Optional Image */}
+            {filteredNotices.map((n) => (
+              <Card key={n.id} sx={{ borderRadius: 2 }}>
                 {n.imageUrl && (
                   <Box
-                    className="notice-image"
                     sx={{
                       width: "100%",
                       maxHeight: 200,
@@ -114,10 +174,7 @@ export default function NoticeBoard() {
                       alt="Notice"
                       style={{
                         width: "100%",
-                        height: "auto",
                         objectFit: "contain",
-                        display: "block",
-                        margin: "0 auto",
                       }}
                       onError={(e) => (e.target.style.display = "none")}
                     />
@@ -126,15 +183,19 @@ export default function NoticeBoard() {
 
                 <CardContent>
                   <Typography variant="h6">{n.title}</Typography>
+
                   <Typography variant="body2" sx={{ mb: 1 }}>
                     {n.description}
                   </Typography>
+
                   <Typography variant="caption" color="text.secondary">
                     🏛 {n.department} | 🎓 {n.year} | 🗂 {n.category}
                   </Typography>
+
                   <Typography variant="body2" sx={{ mt: 1 }}>
                     👤 Posted by: <b>{n.postedBy}</b> ({n.role})
                   </Typography>
+
                   <Typography variant="caption" color="text.secondary">
                     {n.timestamp?.toDate
                       ? n.timestamp.toDate().toLocaleString()

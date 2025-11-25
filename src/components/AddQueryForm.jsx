@@ -1,14 +1,14 @@
-// src/components/AddQueryForm.jsx
+
 import React, { useState } from "react";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "../firebase"; // Make sure db is Firestore instance
+import { db } from "../firebase"; 
 import "../styles/queries.css";
 
 export default function AddQueryForm({ onPosted }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
-  const [postedBy, setPostedBy] = useState(""); // optional name
+  const [postedBy, setPostedBy] = useState(""); 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -31,20 +31,19 @@ export default function AddQueryForm({ onPosted }) {
     setMessage("");
 
     try {
-      // Reference to the 'queries' collection in Firestore
+      
       const queriesRef = collection(db, "queries");
 
-      // Add document to Firestore
+      
       const docRef = await addDoc(queriesRef, {
         title: title.trim(),
         description: description.trim(),
         category: category.trim() || "General",
         postedBy: postedBy.trim() || "Anonymous",
-        date_posted: serverTimestamp(), // timestamp from server
-        status: "open", // default status
+        date_posted: serverTimestamp(), 
+        status: "open", 
       });
 
-      // Notify parent component if needed
       if (onPosted) onPosted({ id: docRef.id, title: title.trim() });
 
       setMessage("Query posted successfully!");
@@ -56,7 +55,7 @@ export default function AddQueryForm({ onPosted }) {
 
     setLoading(false);
 
-    // Remove message after 3 seconds
+   
     setTimeout(() => setMessage(""), 3000);
   };
 

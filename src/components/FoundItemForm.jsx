@@ -12,7 +12,7 @@ const FoundItemForm = () => {
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // 🔑 Paste your ImgBB API key here
+  // API Key for imgbb
   const IMGBB_API_KEY = "3762ab13c55ff6c4cfba5b63dba662dd";
 
   const handleSubmit = async (e) => {

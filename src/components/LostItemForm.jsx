@@ -1,7 +1,6 @@
-// src/components/LostItemForm.jsx
 import React, { useState } from "react";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "../firebase"; // make sure firebase is correctly initialized
+import { db } from "../firebase"; 
 import "../styles/LostFound.css";
 
 const LostItemForm = () => {
@@ -12,7 +11,7 @@ const LostItemForm = () => {
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // 🔑 Paste your ImgBB API key here
+  // API Key for imgbb
   const IMGBB_API_KEY = "3762ab13c55ff6c4cfba5b63dba662dd";
 
   const handleSubmit = async (e) => {
@@ -48,8 +47,6 @@ const LostItemForm = () => {
         return;
       }
     }
-
-    // Store form data in Firestore
     try {
       await addDoc(collection(db, "lost_items"), {
         title,

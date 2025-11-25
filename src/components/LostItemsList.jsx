@@ -1,4 +1,4 @@
-// src/components/LostItemsList.js
+
 import React, { useEffect, useState } from "react";
 import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
 import { db } from "../firebase";

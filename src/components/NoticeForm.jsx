@@ -23,7 +23,7 @@ export default function NoticeForm({ onAdded }) {
   const [openSnack, setOpenSnack] = useState(false);
   const [userData, setUserData] = useState({ name: "", role: "", department: "" });
 
-  // ✅ Fetch user details based on login
+
   useEffect(() => {
     const fetchUserData = async () => {
       if (user) {
@@ -31,7 +31,7 @@ export default function NoticeForm({ onAdded }) {
           let userSnap;
 
           if (user.uid) {
-            // Try UID first
+            
             const docRef = doc(db, "users", user.uid);
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
@@ -40,7 +40,7 @@ export default function NoticeForm({ onAdded }) {
           }
 
           if (!userSnap && user.email) {
-            // Try matching email if UID doc not found
+           
             const q = query(collection(db, "users"), where("email", "==", user.email));
             const querySnap = await getDocs(q);
             if (!querySnap.empty) {
@@ -66,7 +66,7 @@ export default function NoticeForm({ onAdded }) {
     fetchUserData();
   }, [user]);
 
-  // ✅ Upload image to ImgBB
+  // upload image to ImgBB
   const uploadImageToImgBB = async (file) => {
     const formData = new FormData();
     formData.append("image", file);
@@ -78,7 +78,7 @@ export default function NoticeForm({ onAdded }) {
     return data?.data?.url || "";
   };
 
-  // ✅ Submit Notice
+  //  Submit Notice
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -120,7 +120,7 @@ export default function NoticeForm({ onAdded }) {
   return (
     <Paper elevation={5} sx={{ p: 4, mb: 4, borderRadius: 3, maxWidth: 700, margin: "2rem auto" }}>
       <Typography variant="h5" sx={{ mb: 3, textAlign: "center", fontWeight: 600 }}>
-        📢 Post New Notice
+         Post New Notice
       </Typography>
 
       <Box component="form" onSubmit={handleSubmit} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
