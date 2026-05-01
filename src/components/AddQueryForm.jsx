@@ -1,7 +1,7 @@
-
 import React, { useState } from "react";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase"; 
+import { suggestCategory } from "../ml/smartTagger";
 import "../styles/queries.css";
 
 export default function AddQueryForm({ onPosted }) {
@@ -19,6 +19,22 @@ export default function AddQueryForm({ onPosted }) {
     setPostedBy("");
   };
 
+  const handleAutoTag = () => {
+    if (!title && !description) {
+      setMessage("Please enter a title or description first.");
+      setTimeout(() => setMessage(""), 3000);
+      return;
+    }
+    const suggested = suggestCategory(title, description);
+    if (suggested) {
+      setCategory(suggested);
+      setMessage(`Suggested category: ${suggested}`);
+    } else {
+      setMessage("Could not find a matching category.");
+    }
+    setTimeout(() => setMessage(""), 3000);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -31,9 +47,7 @@ export default function AddQueryForm({ onPosted }) {
     setMessage("");
 
     try {
-      
       const queriesRef = collection(db, "queries");
-
       
       const docRef = await addDoc(queriesRef, {
         title: title.trim(),
@@ -54,8 +68,6 @@ export default function AddQueryForm({ onPosted }) {
     }
 
     setLoading(false);
-
-   
     setTimeout(() => setMessage(""), 3000);
   };
 
@@ -77,12 +89,27 @@ export default function AddQueryForm({ onPosted }) {
           onChange={(e) => setDescription(e.target.value)}
           required
         />
-        <input
-          type="text"
-          placeholder="Category (e.g., Academics, Career)"
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-        />
+        <div style={{ display: "flex", gap: "10px" }}>
+          <input
+            type="text"
+            placeholder="Category (e.g., Academics, Career)"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            style={{ flexGrow: 1 }}
+          />
+          <button 
+            type="button" 
+            onClick={handleAutoTag}
+            style={{ 
+              whiteSpace: "nowrap", 
+              backgroundColor: "#f0f0f0", 
+              color: "#333",
+              border: "1px solid #ccc"
+            }}
+          >
+            Auto Tag ✨
+          </button>
+        </div>
         <input
           type="text"
           placeholder="Your name (optional)"

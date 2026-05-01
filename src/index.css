@@ -1,25 +1,36 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
 /* index.css - minimal resets and base styles */
 html, body, #root {
     height: 100%;
     width: 100%;
     margin: 0;
     padding: 0;
+    font-family: 'Outfit', system-ui, -apple-system, sans-serif;
 }
 
 body {
-    font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
     line-height: 1.5;
     font-weight: 400;
     display: flex;
-    place-items: center;
+    place-items: flex-start;
     width: 100%;
     min-height: 100vh;
-    background-color: var(--background-color); /* from global.css */
-    color: var(--text-color); /* from global.css */
+    background: var(--background-gradient);
+    background-size: 400% 400%;
+    animation: gradientBG 15s ease infinite;
+    color: var(--text-color);
+}
+
+@keyframes gradientBG {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
 }
 
 h1, h2, h3, h4, h5, h6 {
     margin: 0;
+    font-weight: 600;
 }
 
 a {
@@ -30,6 +41,6 @@ a {
 button {
     font-family: inherit;
     cursor: pointer;
-    border-radius: 8px;
+    border-radius: 12px;
     border: 1px solid transparent;
 }

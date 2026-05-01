@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "../firebase"; 
-import "../styles/LostFound.css";
+import { db } from "../firebase";
+import { Paper, Typography, TextField, Button, Grid, CircularProgress, Box } from "@mui/material";
+import { uploadImageToImgBB } from "../utils/imageUpload";
 
 const LostItemForm = () => {
   const [title, setTitle] = useState("");
@@ -11,43 +12,18 @@ const LostItemForm = () => {
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // API Key for imgbb
-  const IMGBB_API_KEY = "3762ab13c55ff6c4cfba5b63dba662dd";
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
-    let imageUrl = "";
-
-    // Upload image to ImgBB if selected
-    if (image) {
-      try {
-        const formData = new FormData();
-        formData.append("image", image);
-
-        const res = await fetch(
-          `https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`,
-          {
-            method: "POST",
-            body: formData,
-          }
-        );
-
-        const data = await res.json();
-        if (data.success) {
-          imageUrl = data.data.url;
-        } else {
-          throw new Error("Image upload failed");
-        }
-      } catch (err) {
-        console.error("Image upload error:", err);
-        alert("Image upload failed. Try again.");
-        setLoading(false);
-        return;
-      }
-    }
     try {
+      let imageUrl = "";
+
+      // Upload image using centralized utility
+      if (image) {
+        imageUrl = await uploadImageToImgBB(image);
+      }
+
       await addDoc(collection(db, "lost_items"), {
         title,
         description,
@@ -73,44 +49,80 @@ const LostItemForm = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="lost-item-form">
-      <h2>Report Lost Item</h2>
-      <input
-        type="text"
-        placeholder="Title"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        required
-      />
-      <textarea
-        placeholder="Description"
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        required
-      />
-      <input
-        type="text"
-        placeholder="Category (phone, wallet, keys...)"
-        value={category}
-        onChange={(e) => setCategory(e.target.value)}
-        required
-      />
-      <input
-        type="text"
-        placeholder="Location"
-        value={location}
-        onChange={(e) => setLocation(e.target.value)}
-        required
-      />
-      <input
-        type="file"
-        accept="image/*"
-        onChange={(e) => setImage(e.target.files[0])}
-      />
-      <button type="submit" disabled={loading}>
-        {loading ? "Submitting..." : "Submit"}
-      </button>
-    </form>
+    <Paper sx={{ p: 4, borderRadius: 3, boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}>
+      <Typography variant="h6" fontWeight="bold" mb={3} color="primary.main">
+        Report Lost Item
+      </Typography>
+      <form onSubmit={handleSubmit}>
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              label="Title"
+              variant="outlined"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+            />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              label="Category (phone, wallet, keys...)"
+              variant="outlined"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              required
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              label="Location"
+              variant="outlined"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              required
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              label="Description"
+              variant="outlined"
+              multiline
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              required
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <Box sx={{ border: '1px dashed #cbd5e1', p: 2, borderRadius: 2, textAlign: 'center' }}>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setImage(e.target.files[0])}
+                style={{ width: '100%' }}
+              />
+            </Box>
+          </Grid>
+          <Grid item xs={12}>
+            <Button
+              type="submit"
+              variant="contained"
+              color="primary"
+              fullWidth
+              size="large"
+              disabled={loading}
+              sx={{ py: 1.5, fontWeight: 'bold' }}
+            >
+              {loading ? <CircularProgress size={24} color="inherit" /> : "Submit Report"}
+            </Button>
+          </Grid>
+        </Grid>
+      </form>
+    </Paper>
   );
 };
 

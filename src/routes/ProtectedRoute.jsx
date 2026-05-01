@@ -1,14 +1,17 @@
 import { Navigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import { CircularProgress, Box } from "@mui/material";
 
-export default function ProtectedRoute({ children, allowedRoles }) {
-  const { user, loading } = useAuth();
+const ProtectedRoute = ({ children, allowedRoles }) => {
+  const role = localStorage.getItem("role");
 
-  if (loading) return <Box sx={{ display: "flex", justifyContent: "center", mt: 10 }}><CircularProgress /></Box>;
+  if (!role) {
+    return <Navigate to="/" />;
+  }
 
-  if (!user) return <Navigate to="/login" />;
-  if (!allowedRoles.includes(user.role)) return <Navigate to="/" />;
+  if (allowedRoles && !allowedRoles.includes(role)) {
+    return <Navigate to="/unauthorized" />;
+  }
 
   return children;
-}
+};
+
+export default ProtectedRoute;

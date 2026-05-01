@@ -1,256 +1,225 @@
 import { useEffect, useState } from "react";
 import emailjs from "emailjs-com";
-import { db } from "../firebase";
-import { collection, getDocs, addDoc, updateDoc, doc, deleteDoc } from "firebase/firestore";
+import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 import {
-  Container, Typography, Grid, Paper, Box, TextField,
-  Select, MenuItem, Button, Tabs, Tab, Dialog,
-  DialogTitle, DialogContent, DialogActions, FormControlLabel, Switch, Avatar
+  Container, Typography, Grid, Paper, Box, TextField, Select, MenuItem,
+  Button, Tabs, Tab, Dialog, DialogTitle, DialogContent, DialogActions,
+  FormControlLabel, Switch, Avatar, InputAdornment, Chip, Divider
 } from "@mui/material";
 import PersonIcon from '@mui/icons-material/Person';
+import SearchIcon from "@mui/icons-material/Search";
+import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import "../styles/HODDashboard.css";
 
 function TabPanel({ children, value, index }) {
-  return <div hidden={value !== index}>{value === index && <Box sx={{ mt: 2 }}>{children}</Box>}</div>;
+  return (
+    <div hidden={value !== index}>
+      {value === index && <Box sx={{ mt: 2 }}>{children}</Box>}
+    </div>
+  );
 }
 
 export default function HodUserManagement() {
   const { user } = useAuth();
   const [users, setUsers] = useState([]);
-  const [form, setForm] = useState({ name: "", email: "", role: "student", year: "" });
+  const [fees, setFees] = useState([]);
+  const [search, setSearch] = useState("");
+  const [form, setForm] = useState({ name: "", email: "", role: "STUDENT", year: "" });
   const [tabIndex, setTabIndex] = useState(0);
   const [editUser, setEditUser] = useState(null);
 
-  const roles = ["student", "teacher", "pending"];
+  // Fee state
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [isPayModalOpen, setIsPayModalOpen] = useState(false);
+  const [feeForm, setFeeForm] = useState({ totalFees: "", paidFees: "" });
 
-  // Fetch users
-  const fetchUsers = async () => {
-    const snapshot = await getDocs(collection(db, "users"));
-    const deptUsers = snapshot.docs
-      .map(doc => ({ id: doc.id, ...doc.data() }))
-      .filter(u => u.department === user?.department && (["student", "teacher"].includes(u.role)));
-    setUsers(deptUsers);
+  const API_USERS = "http://localhost:8080/api/users";
+  const API_FEES = "http://localhost:8080/api/fees";
+
+  const fetchData = async () => {
+    try {
+      const [uRes, fRes] = await Promise.all([axios.get(API_USERS), axios.get(API_FEES)]);
+      const deptUsers = uRes.data.filter(u => u.department?.toLowerCase() === user?.department?.toLowerCase());
+      setUsers(deptUsers);
+      setFees(fRes.data);
+    } catch (e) { console.error(e); }
   };
 
-  useEffect(() => { if (user) fetchUsers(); }, [user]);
+  useEffect(() => { if (user) fetchData(); }, [user]);
 
-  // Add Student
-const handleAddUser = async () => {
-  if (!form.name || !form.email || !form.year)
-    return alert("All fields required");
-
-  const generatePassword = (length = 10) => {
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$!&";
-    let password = "";
-    for (let i = 0; i < length; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return password;
-  };
-
-  const password = generatePassword();
-
-  await addDoc(collection(db, "users"), {
-    ...form,
-    role: "student",
-    department: user.department,
-    approved: false,
-    password,
-    createdAt: new Date().toISOString(),
-  });
-
-  // ✅ Send email with credentials
-  const templateParams = {
-    name: form.name,
-    email: form.email,
-    password,
-  };
-
-  emailjs
-    .send("service_ydtu7jp", "template_etypntv", templateParams, "NN3gMWSv34ggrAvsV")
-    .then(
-      () => {
-        alert(`✅ User added and email sent to ${form.email}`);
-      },
-      (error) => {
-        console.error("❌ Failed to send email:", error);
-        alert("User added but email could not be sent.");
-      }
+  const highlight = (text, query) => {
+    if (!query) return text;
+    const regex = new RegExp(`(${query})`, "gi");
+    return text?.split(regex).map((part, i) =>
+      part.toLowerCase() === query.toLowerCase() ? <span key={i} style={{ backgroundColor: "#ffff00" }}>{part}</span> : part
     );
-  setForm({ name: "", email: "", role: "student", year: "" });
-  fetchUsers();
-};  
-
-
-  // Update user
-  const handleUpdate = async () => {
-    if (!editUser) return;
-    await updateDoc(doc(db, "users", editUser.id), editUser);
-    setEditUser(null);
-    fetchUsers();
   };
 
-  // Delete user
+  const handleAddUser = async () => {
+    if (!form.name || !form.email) return alert("Fields missing");
+    const password = Math.random().toString(36).slice(-8);
+    try {
+      await axios.post(API_USERS, { ...form, department: user.department, password, approved: false });
+      emailjs.send("service_ydtu7jp", "template_etypntv", { name: form.name, email: form.email, password }, "NN3gMWSv34ggrAvsV");
+      setForm({ name: "", email: "", role: "STUDENT", year: "" });
+      fetchData();
+    } catch (e) { console.error(e); }
+  };
+
+  const handleUpdate = async () => {
+    try { await axios.put(`${API_USERS}/${editUser.id}`, editUser); setEditUser(null); fetchData(); } catch (e) { console.error(e); }
+  };
+
+  const handleApprove = async (id) => {
+    try { await axios.put(`${API_USERS}/${id}/approve`); fetchData(); } catch (e) { console.error(e); }
+  };
+
   const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this user?")) {
-      await deleteDoc(doc(db, "users", id));
-      fetchUsers();
+    if (window.confirm("Delete user?")) {
+      try { await axios.delete(`${API_USERS}/${id}`); fetchData(); } catch (e) { console.error(e); }
     }
   };
 
-  // Approve user
-  const handleApprove = async (id) => {
-    await updateDoc(doc(db, "users", id), { approved: true });
-    fetchUsers();
+  const handleAssignFee = async () => {
+    try {
+      await axios.post(API_FEES, { totalFees: Number(feeForm.totalFees), paidFees: Number(feeForm.paidFees)||0, user: {id: selectedStudent.id} });
+      setIsAssignModalOpen(false);
+      fetchData();
+    } catch (e) { alert("Error"); }
   };
 
-  const handleTabChange = (e, newValue) => setTabIndex(newValue);
+  const handleLogPayment = async () => {
+    try {
+      const rec = fees.find(f => f.user?.id === selectedStudent.id);
+      const paid = Number(rec.paidFees) + Number(feeForm.paidFees);
+      await axios.put(`${API_FEES}/${rec.id}`, { ...rec, paidFees: paid, remainingFees: rec.totalFees - paid, status: (rec.totalFees-paid)<=0?'Paid':'Pending' });
+      setIsPayModalOpen(false);
+      fetchData();
+    } catch (e) { alert("Error"); }
+  };
 
-  // Filter users
-  const students = users.filter(u => u.role === "student" && u.approved);
-  const teachers = users.filter(u => u.role === "teacher" && u.approved);
-  const pending = users.filter(u => !u.approved);
+  const getFee = (id) => fees.find(f => f.user?.id === id);
 
-  const filteredUsers = [students, teachers, pending];
+  const tabs = ["Students", "Teachers", "Pending Approvals", "Fees Management"];
+  const filteredData = [
+    users.filter(u => u.role === "STUDENT" && u.approved),
+    users.filter(u => u.role === "TEACHER" && u.approved),
+    users.filter(u => !u.approved),
+    users.filter(u => u.role === "STUDENT" && u.approved)
+  ];
 
   return (
     <Container sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" sx={{ mb: 3, textAlign: "center" }}>
-        HOD User Management - {user?.department} Department
+      <Typography variant="h4" sx={{ mb: 3, textAlign: "center", fontWeight: 'bold', color: '#4F46E5' }}>
+        HOD Management - {user?.department}
       </Typography>
 
-      {/* Add User Form */}
-      <Paper sx={{ p: 3, mb: 4 }}>
-        <Typography variant="h6" sx={{ mb: 2 }}>Add New User</Typography>
-        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
-          <TextField
-            label="Name"
-            value={form.name}
-            onChange={e => setForm({ ...form, name: e.target.value })}
-          />
-          <TextField
-            label="Email"
-            value={form.email}
-            onChange={e => setForm({ ...form, email: e.target.value })}
-          />
-          <Select
-            value={form.role}
-            onChange={e => setForm({ ...form, role: e.target.value, year: "" })}
-          >
-            <MenuItem value="student">Student</MenuItem>
-            <MenuItem value="teacher">Teacher</MenuItem>
-          </Select>
-          {form.role === "student" && (
-            <Select
-              value={form.year || ""}
-              onChange={e => setForm({ ...form, year: e.target.value })}
-              displayEmpty
-            >
-              <MenuItem value="" disabled>Select Year</MenuItem>
-              <MenuItem value="1">1st Year</MenuItem>
-              <MenuItem value="2">2nd Year</MenuItem>
-              <MenuItem value="3">3rd Year</MenuItem>
-              <MenuItem value="4">4th Year</MenuItem>
-            </Select>
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={tabIndex === 3 ? 12 : 4}>
+          {tabIndex !== 3 ? (
+            <Paper sx={{ p: 3, borderRadius: '15px' }} elevation={4}>
+              <Typography variant="h6" fontWeight="bold" gutterBottom>Add User</Typography>
+              <TextField label="Name" fullWidth sx={{ mb: 2 }} value={form.name} onChange={e=>setForm({...form,name:e.target.value})} />
+              <TextField label="Email" fullWidth sx={{ mb: 2 }} value={form.email} onChange={e=>setForm({...form,email:e.target.value})} />
+              <Select fullWidth sx={{ mb: 2 }} value={form.role} onChange={e=>setForm({...form,role:e.target.value})}>
+                <MenuItem value="STUDENT">Student</MenuItem><MenuItem value="TEACHER">Teacher</MenuItem>
+              </Select>
+              {form.role === "STUDENT" && (
+                <Select fullWidth sx={{ mb: 2 }} value={form.year} onChange={e=>setForm({...form,year:e.target.value})} displayEmpty>
+                  <MenuItem value="" disabled>Select Year</MenuItem><MenuItem value="1">1st Year</MenuItem><MenuItem value="2">2nd Year</MenuItem>
+                </Select>
+              )}
+              <Button variant="contained" fullWidth onClick={handleAddUser}>Add User</Button>
+            </Paper>
+          ) : (
+            <Box sx={{ mb: 4, display: 'flex', gap: 2 }}>
+                <Paper sx={{ p: 2, flex: 1, borderLeft: '5px solid #4F46E5' }}>
+                  <Typography variant="caption">Total Expected</Typography>
+                  <Typography variant="h6">₹{fees.filter(f=>f.user?.department===user.department).reduce((a,b)=>a+b.totalFees,0).toLocaleString()}</Typography>
+                </Paper>
+                <Paper sx={{ p: 2, flex: 1, borderLeft: '5px solid #10B981' }}>
+                  <Typography variant="caption">Collected</Typography>
+                  <Typography variant="h6">₹{fees.filter(f=>f.user?.department===user.department).reduce((a,b)=>a+b.paidFees,0).toLocaleString()}</Typography>
+                </Paper>
+            </Box>
           )}
-          <Button variant="contained" onClick={handleAddUser}>Add User</Button>
-        </Box>
-      </Paper>
+        </Grid>
 
-      {/* Tabs */}
-      <Paper sx={{ p: 2 }}>
-        <Tabs value={tabIndex} onChange={handleTabChange} variant="fullWidth">
-          <Tab label="Students" />
-          <Tab label="Teachers" />
-          <Tab label={`Pending Approvals (${pending.length})`} />
-        </Tabs>
+        <Grid item xs={12} md={tabIndex === 3 ? 12 : 8}>
+          <Paper sx={{ p: 2, borderRadius: '15px' }} elevation={8}>
+            <Tabs value={tabIndex} onChange={(e,v)=>setTabIndex(v)} variant="fullWidth" sx={{ '& .MuiTabs-flexContainer': { gap: 2 } }}>
+              {tabs.map((t,i)=><Tab key={i} label={t} sx={{fontWeight:'bold'}}/>)}
+            </Tabs>
+            <TextField fullWidth size="small" placeholder="Search..." value={search} onChange={e=>setSearch(e.target.value)} sx={{ my: 2 }} />
 
-        {filteredUsers.map((userList, i) => (
-          <TabPanel key={i} value={tabIndex} index={i}>
-            {userList.length === 0 ? (
-              <Typography sx={{ mt: 2 }}>No users found.</Typography>
-            ) : (
-              <Grid container spacing={2} sx={{ mt: 1 }}>
-                {userList.map(u => (
-                  <Grid item xs={12} sm={6} md={4} key={u.id}>
-                    <Paper className="user-card" elevation={3} sx={{ p: 2 }}>
-                      <Box sx={{ display: "flex", justifyContent: "center", mb: 1 }}>
-                        <Avatar sx={{ bgcolor: "#2563EB", width: 56, height: 56 }}>
-                          <PersonIcon fontSize="large" />
-                        </Avatar>
-                      </Box>
-                      <Typography sx={{ fontWeight: "bold", textAlign: "center" }}>{u.name}</Typography>
-                      <Typography sx={{ textAlign: "center" }}>{u.role}</Typography>
-                      {u.role === "student" && (
-                        <Typography sx={{ textAlign: "center", fontSize: "0.8rem" }}>Year: {u.year}</Typography>
-                      )}
-                      <Typography sx={{ textAlign: "center", fontSize: "0.8rem", color: u.approved ? "green" : "red" }}>
-                        {u.approved ? "Approved" : "Pending"}
-                      </Typography>
-
-                      <Box sx={{ display: "flex", justifyContent: "center", gap: 1, mt: 1, flexWrap: "wrap" }}>
-                        {!u.approved && (
-                          <Button variant="contained" color="success" size="small" onClick={() => handleApprove(u.id)}>
-                            Approve
-                          </Button>
+            <TabPanel value={tabIndex} index={tabIndex}>
+              <Grid container spacing={2}>
+                {filteredData[tabIndex].filter(u => u.name?.toLowerCase().includes(search.toLowerCase())).map(u => {
+                  const fr = getFee(u.id);
+                  return (
+                    <Grid item xs={12} sm={6} md={4} key={u.id}>
+                      <Paper sx={{ p: 2, borderRadius: '12px', borderTop: `4px solid ${tabIndex===3 ? (fr?(fr.status==='Paid'?'#10B981':'#F59E0B'):'#94A3B8') : (u.approved?'#16a34a':'#2563EB')}` }}>
+                        <Typography fontWeight="bold">{highlight(u.name, search)}</Typography>
+                        <Typography variant="caption" color="textSecondary">{u.email}</Typography>
+                        {tabIndex === 3 && (
+                          <Box mt={1}>
+                            {fr ? (
+                              <>
+                                <Typography variant="body2">Due: ₹{fr.remainingFees}</Typography>
+                                <Chip label={fr.status} size="small" color={fr.status==='Paid'?'success':'warning'} />
+                              </>
+                            ) : <Typography variant="body2">Unassigned</Typography>}
+                          </Box>
                         )}
-                        <Button variant="outlined" size="small" onClick={() => setEditUser(u)}>Edit</Button>
-                        <Button variant="outlined" color="error" size="small" onClick={() => handleDelete(u.id)}>Delete</Button>
-                      </Box>
-                    </Paper>
-                  </Grid>
-                ))}
+                        <Box mt={2} display="flex" gap={1}>
+                          {tabIndex === 3 ? (
+                            !fr ? <Button size="small" variant="contained" onClick={()=>{setSelectedStudent(u);setIsAssignModalOpen(true);}}>Assign</Button>
+                                : fr.status!=='Paid' ? <Button size="small" variant="outlined" onClick={()=>{setSelectedStudent(u);setIsPayModalOpen(true);}}>Pay</Button>
+                                : <Chip label="Paid" variant="outlined" color="success" />
+                          ) : (
+                            <>
+                              {!u.approved && <Button variant="contained" size="small" color="success" onClick={()=>handleApprove(u.id)}>Approve</Button>}
+                              <Button variant="outlined" size="small" onClick={()=>setEditUser(u)}>Edit</Button>
+                              <Button variant="contained" size="small" color="error" onClick={()=>handleDelete(u.id)}>Delete</Button>
+                            </>
+                          )}
+                        </Box>
+                      </Paper>
+                    </Grid>
+                  )
+                })}
               </Grid>
-            )}
-          </TabPanel>
-        ))}
-      </Paper>
+            </TabPanel>
+          </Paper>
+        </Grid>
+      </Grid>
 
-      {/* Edit Dialog */}
-      <Dialog open={!!editUser} onClose={() => setEditUser(null)}>
+      {/* MODALS SAME AS ADMIN */}
+      <Dialog open={!!editUser} onClose={()=>setEditUser(null)} maxWidth="xs" fullWidth>
         <DialogTitle>Edit User</DialogTitle>
         <DialogContent>
-          {editUser && ["name", "email", "role"].map(field => (
-            <TextField
-              key={field}
-              label={field.charAt(0).toUpperCase() + field.slice(1)}
-              value={editUser[field]}
-              onChange={e => setEditUser({ ...editUser, [field]: e.target.value })}
-              fullWidth
-              sx={{ mb: 2 }}
-            />
-          ))}
-          {editUser && editUser.role === "student" && (
-            <Select
-              value={editUser.year || ""}
-              onChange={e => setEditUser({ ...editUser, year: e.target.value })}
-              fullWidth
-              sx={{ mb: 2 }}
-            >
-              <MenuItem value="" disabled>Select Year</MenuItem>
-              <MenuItem value="1">1st Year</MenuItem>
-              <MenuItem value="2">2nd Year</MenuItem>
-              <MenuItem value="3">3rd Year</MenuItem>
-              <MenuItem value="4">4th Year</MenuItem>
-            </Select>
-          )}
-          {editUser && (
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={editUser.approved}
-                  onChange={e => setEditUser({ ...editUser, approved: e.target.checked })}
-                />
-              }
-              label="Approved"
-            />
-          )}
+          {editUser && ["name","email"].map(f => <TextField key={f} label={f} fullWidth sx={{mt:2}} value={editUser[f]||""} onChange={e=>setEditUser({...editUser,[f]:e.target.value})}/>)}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setEditUser(null)}>Cancel</Button>
-          <Button variant="contained" onClick={handleUpdate}>Save</Button>
-        </DialogActions>
+        <DialogActions><Button onClick={()=>setEditUser(null)}>Cancel</Button><Button variant="contained" onClick={handleUpdate}>Save</Button></DialogActions>
+      </Dialog>
+
+      <Dialog open={isAssignModalOpen} onClose={()=>setIsAssignModalOpen(false)}>
+        <DialogTitle>Assign Fee</DialogTitle>
+        <DialogContent>
+          <TextField label="Total" fullWidth sx={{mt:2}} type="number" value={feeForm.totalFees} onChange={e=>setFeeForm({...feeForm,totalFees:e.target.value})}/>
+        </DialogContent>
+        <DialogActions><Button onClick={()=>setIsAssignModalOpen(false)}>Cancel</Button><Button variant="contained" onClick={handleAssignFee}>Assign</Button></DialogActions>
+      </Dialog>
+
+      <Dialog open={isPayModalOpen} onClose={()=>setIsPayModalOpen(false)}>
+        <DialogTitle>Pay Fee</DialogTitle>
+        <DialogContent>
+          <TextField label="Amount" fullWidth sx={{mt:2}} type="number" value={feeForm.paidFees} onChange={e=>setFeeForm({...feeForm,paidFees:e.target.value})}/>
+        </DialogContent>
+        <DialogActions><Button onClick={()=>setIsPayModalOpen(false)}>Cancel</Button><Button variant="contained" onClick={handleLogPayment}>Pay</Button></DialogActions>
       </Dialog>
     </Container>
   );

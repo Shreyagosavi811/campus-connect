@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { db } from "../firebase";
-import { collection, getDocs, updateDoc, doc } from "firebase/firestore";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { Container, Typography, Grid, Paper, Button } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -8,25 +8,36 @@ import CountUp from "react-countup";
 import "../styles/HODDashboard.css";
 
 export default function HodDashboard() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [users, setUsers] = useState([]);
   const [pendingList, setPendingList] = useState([]);
 
   // Fetch all department users
   const fetchUsers = async () => {
-    const snap = await getDocs(collection(db, "users"));
-    const deptUsers = snap.docs
-      .map(d => ({ id: d.id, ...d.data() }))
-      .filter(u => u.department === user.department && (u.role === "teacher" || u.role === "student"));
-    setUsers(deptUsers);
-    setPendingList(deptUsers.filter(u => !u.approved));
+    try {
+      const res = await axios.get("http://localhost:8080/api/users");
+      const deptUsers = res.data.filter(u => 
+        u.department === user.department && 
+        (u.role?.toUpperCase() === "TEACHER" || u.role?.toUpperCase() === "STUDENT")
+      );
+      setUsers(deptUsers);
+      setPendingList(deptUsers.filter(u => !u.approved));
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
+    }
   };
 
   useEffect(() => { if(user) fetchUsers(); }, [user]);
 
+  // handleApprove is not actually used in this simple dashboard view, but keeping it empty or calling axios to prevent errors if invoked
   const handleApprove = async (id) => {
-    await updateDoc(doc(db, "users", id), { approved: true });
-    fetchUsers();
+    try {
+      await axios.put(`http://localhost:8080/api/users/${id}/approve`);
+      fetchUsers();
+    } catch (error) {
+      console.error("Failed to approve:", error);
+    }
   };
 
   // Dashboard stats
@@ -46,6 +57,7 @@ export default function HodDashboard() {
     { label: "Teachers", count: stats.totalTeachers, color: "#16a34a" },
     { label: "Students", count: stats.totalStudents, color: "#f59e0b" },
     { label: "Pending Approval", count: stats.pending, color: "#e11d48", clickable: true },
+    { label: "Fees Management", count: stats.totalStudents, color: "#8b5cf6", path: "/fees" },
   ];
 
   const yearCards = [
@@ -75,7 +87,10 @@ export default function HodDashboard() {
                 cursor: card.clickable ? "pointer" : "default"
               }}
               elevation={6}
-              onClick={() => card.clickable && setPendingList(users.filter(u => !u.approved))}
+              onClick={() => {
+                if (card.clickable) setPendingList(users.filter(u => !u.approved));
+                if (card.path) navigate(card.path);
+              }}
             >
               <Typography sx={{ mb: 1, fontWeight: 500 }}>{card.label}</Typography>
               <Typography variant="h4" sx={{ color: card.color }}>{card.count}</Typography>

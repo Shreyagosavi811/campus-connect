@@ -1,29 +1,73 @@
 import { useState, useEffect } from "react";
 import { db } from "../firebase";
-import { collection, addDoc, serverTimestamp, doc, getDoc, query, where, getDocs } from "firebase/firestore";
-import { TextField, Button, MenuItem, Box, Paper, Typography, LinearProgress, Snackbar } from "@mui/material";
+import {
+  collection,
+  addDoc,
+  serverTimestamp,
+  doc,
+  getDoc,
+  query,
+  where,
+  getDocs,
+} from "firebase/firestore";
+
+import {
+  TextField,
+  Button,
+  MenuItem,
+  Box,
+  Paper,
+  Typography,
+  LinearProgress,
+  Snackbar,
+  FormControl,
+} from "@mui/material";
+
 import { useAuth } from "../context/AuthContext";
 import "../styles/NoticeBoard.css";
-import { FormControl, InputLabel, Select } from "@mui/material";
+import classifyNotice from "../utils/classifyNotice";
+import { uploadImageToImgBB } from "../utils/imageUpload";
+
 const categories = ["Exam", "Placement", "Cultural", "Other"];
-const departments = ["All", "Computer Engineering", "Electrical Engineering", "Civil Engineering", "Mechanical Engineering"];
+
+const departments = [
+  "All",
+  "Computer Engineering",
+  "Electrical Engineering",
+  "Civil Engineering",
+  "Mechanical Engineering",
+];
+
 const years = ["All", "1st", "2nd", "3rd", "4th"];
-const IMGBB_API_KEY = "3762ab13c55ff6c4cfba5b63dba662dd";
 
 export default function NoticeForm({ onAdded }) {
   const { user } = useAuth();
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("Exam");
+
+  const [category, setCategory] = useState("");
+  const [autoCategory, setAutoCategory] = useState("");
+
   const [department, setDepartment] = useState("All");
   const [year, setYear] = useState("All");
+
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [image, setImage] = useState(null);
+
   const [openSnack, setOpenSnack] = useState(false);
-  const [userData, setUserData] = useState({ name: "", role: "", department: "" });
 
+  // ✅ NEW PIN STATE
+  const [isPinned, setIsPinned] = useState(false);
 
+  const [userData, setUserData] = useState({
+    name: "",
+    role: "",
+    department: "",
+  });
+
+  // 🔍 Fetch user data
   useEffect(() => {
     const fetchUserData = async () => {
       if (user) {
@@ -31,7 +75,6 @@ export default function NoticeForm({ onAdded }) {
           let userSnap;
 
           if (user.uid) {
-            
             const docRef = doc(db, "users", user.uid);
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
@@ -40,8 +83,10 @@ export default function NoticeForm({ onAdded }) {
           }
 
           if (!userSnap && user.email) {
-           
-            const q = query(collection(db, "users"), where("email", "==", user.email));
+            const q = query(
+              collection(db, "users"),
+              where("email", "==", user.email)
+            );
             const querySnap = await getDocs(q);
             if (!querySnap.empty) {
               userSnap = querySnap.docs[0].data();
@@ -66,24 +111,22 @@ export default function NoticeForm({ onAdded }) {
     fetchUserData();
   }, [user]);
 
-  // upload image to ImgBB
-  const uploadImageToImgBB = async (file) => {
-    const formData = new FormData();
-    formData.append("image", file);
-    const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
-      method: "POST",
-      body: formData,
-    });
-    const data = await res.json();
-    return data?.data?.url || "";
-  };
+  // 🤖 AUTO CATEGORY DETECTION
+  useEffect(() => {
+    if (title || description) {
+      const detected = classifyNotice(title + " " + description);
+      setAutoCategory(detected);
+    }
+  }, [title, description]);
 
-  //  Submit Notice
+  // 🚀 Submit Notice
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+
     try {
       let imageUrl = "";
+
       if (image) {
         setUploading(true);
         imageUrl = await uploadImageToImgBB(image);
@@ -93,38 +136,79 @@ export default function NoticeForm({ onAdded }) {
       await addDoc(collection(db, "notices"), {
         title,
         description,
-        category,
+        category: category || autoCategory,
         department,
         year,
         imageUrl,
-        postedBy: userData.name || user.displayName || user.email.split("@")[0],
+
+        postedBy:
+          userData.name ||
+          user.displayName ||
+          user.email.split("@")[0],
+
         role: userData.role || "User",
         postedByDepartment: userData.department || "Unknown",
+
+        // ✅ PIN ADDED
+        pinned: isPinned,
+
         timestamp: serverTimestamp(),
       });
 
+      // reset
       setTitle("");
       setDescription("");
-      setCategory("Exam");
+      setCategory("");
+      setAutoCategory("");
       setDepartment("All");
       setYear("All");
       setImage(null);
+      setIsPinned(false); // ✅ RESET PIN
+
       setOpenSnack(true);
       if (onAdded) onAdded();
     } catch (err) {
       console.error("Error adding notice:", err);
     }
+
     setLoading(false);
   };
 
   return (
-    <Paper elevation={5} sx={{ p: 4, mb: 4, borderRadius: 3, maxWidth: 700, margin: "2rem auto" }}>
-      <Typography variant="h5" sx={{ mb: 3, textAlign: "center", fontWeight: 600 }}>
-         Post New Notice
+    <Paper
+      elevation={5}
+      sx={{
+        p: 4,
+        mb: 4,
+        borderRadius: 3,
+        maxWidth: 700,
+        margin: "2rem auto",
+      }}
+    >
+      <Typography
+        variant="h5"
+        sx={{ mb: 3, textAlign: "center", fontWeight: 600 }}
+      >
+        Post New Notice
       </Typography>
 
+      {/* 🤖 AI Suggestion */}
+      {autoCategory && (
+        <Typography sx={{ color: "gray", mb: 2 }}>
+          🤖 AI Suggests: <strong>{autoCategory}</strong>
+        </Typography>
+      )}
+
       <Box component="form" onSubmit={handleSubmit} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-        <TextField label="Title" fullWidth required value={title} onChange={(e) => setTitle(e.target.value)} />
+        
+        <TextField
+          label="Title"
+          fullWidth
+          required
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+        />
+
         <TextField
           label="Description"
           fullWidth
@@ -135,124 +219,95 @@ export default function NoticeForm({ onAdded }) {
           onChange={(e) => setDescription(e.target.value)}
         />
 
-        <Box
-  sx={{
-    display: "flex",
-    flexWrap: "wrap",
-    gap: 2,
-    justifyContent: "center",
-    alignItems: "center",
-    "@media (max-width: 768px)": {
-      flexDirection: "column",
-      gap: 1.5,
-    },
-  }}
->
-  <FormControl sx={{ flex: 1, minWidth: { xs: "100%", sm: "30%" } }}>
-    <TextField
-      select
-      label="Category"
-      value={category}
-      onChange={(e) => setCategory(e.target.value)}
-      fullWidth
-      size="small"
-      sx={{
-        backgroundColor: "rgba(255,255,255,0.95)",
-        borderRadius: 2,
-        "& .MuiOutlinedInput-notchedOutline": {
-          borderColor: "#cbd5e1",
-        },
-        "&:hover .MuiOutlinedInput-notchedOutline": {
-          borderColor: "#9333ea",
-        },
-        "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-          borderColor: "#9333ea",
-          boxShadow: "0 0 0 3px rgba(147, 51, 234, 0.2)",
-        },
-      }}
-    >
-      {categories.map((cat) => (
-        <MenuItem key={cat} value={cat}>{cat}</MenuItem>
-      ))}
-    </TextField>
-  </FormControl>
+        {/* Category */}
+        <FormControl fullWidth>
+          <TextField
+            select
+            label="Category (AI Suggested)"
+            value={category || autoCategory}
+            onChange={(e) => setCategory(e.target.value)}
+          >
+            {[autoCategory, ...categories]
+              .filter((v, i, arr) => v && arr.indexOf(v) === i)
+              .map((cat) => (
+                <MenuItem key={cat} value={cat}>
+                  {cat === autoCategory
+                    ? `🤖 ${cat} (Suggested)`
+                    : cat}
+                </MenuItem>
+              ))}
+          </TextField>
+        </FormControl>
 
-  <FormControl sx={{ flex: 1, minWidth: { xs: "100%", sm: "30%" } }}>
-    <TextField
-      select
-      label="Department"
-      value={department}
-      onChange={(e) => setDepartment(e.target.value)}
-      fullWidth
-      size="small"
-      sx={{
-        backgroundColor: "rgba(255,255,255,0.95)",
-        borderRadius: 2,
-        "& .MuiOutlinedInput-notchedOutline": {
-          borderColor: "#cbd5e1",
-        },
-        "&:hover .MuiOutlinedInput-notchedOutline": {
-          borderColor: "#9333ea",
-        },
-        "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-          borderColor: "#9333ea",
-          boxShadow: "0 0 0 3px rgba(147, 51, 234, 0.2)",
-        },
-      }}
-    >
-      {departments.map((dep) => (
-        <MenuItem key={dep} value={dep}>{dep}</MenuItem>
-      ))}
-    </TextField>
-  </FormControl>
+        {/* Department */}
+        <TextField
+          select
+          label="Department"
+          value={department}
+          onChange={(e) => setDepartment(e.target.value)}
+        >
+          {departments.map((dep) => (
+            <MenuItem key={dep} value={dep}>
+              {dep}
+            </MenuItem>
+          ))}
+        </TextField>
 
-  <FormControl sx={{ flex: 1, minWidth: { xs: "100%", sm: "30%" } }}>
-    <TextField
-      select
-      label="Year"
-      value={year}
-      onChange={(e) => setYear(e.target.value)}
-      fullWidth
-      size="small"
-      sx={{
-        backgroundColor: "rgba(255,255,255,0.95)",
-        borderRadius: 2,
-        "& .MuiOutlinedInput-notchedOutline": {
-          borderColor: "#cbd5e1",
-        },
-        "&:hover .MuiOutlinedInput-notchedOutline": {
-          borderColor: "#9333ea",
-        },
-        "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-          borderColor: "#9333ea",
-          boxShadow: "0 0 0 3px rgba(147, 51, 234, 0.2)",
-        },
-      }}
-    >
-      {years.map((y) => (
-        <MenuItem key={y} value={y}>{y}</MenuItem>
-      ))}
-    </TextField>
-  </FormControl>
-</Box>
+        {/* Year */}
+        <TextField
+          select
+          label="Year"
+          value={year}
+          onChange={(e) => setYear(e.target.value)}
+        >
+          {years.map((y) => (
+            <MenuItem key={y} value={y}>
+              {y}
+            </MenuItem>
+          ))}
+        </TextField>
 
+        {/* ✅ PIN BUTTON */}
+        <Button
+          variant={isPinned ? "contained" : "outlined"}
+          color="warning"
+          onClick={() => setIsPinned(!isPinned)}
+        >
+          {isPinned ? "📌 Pinned" : "Pin Notice"}
+        </Button>
 
+        {/* Image Upload */}
         <div className="upload-section">
-          <Button variant="outlined" component="label" color="secondary"  >
+          <Button variant="outlined" component="label">
             {image ? "Change Image" : "Upload Image"}
-            <input type="file" hidden accept="image/*" onChange={(e) => setImage(e.target.files[0])} />
+            <input
+              type="file"
+              hidden
+              accept="image/*"
+              onChange={(e) => setImage(e.target.files[0])}
+            />
           </Button>
-          {image && <p className="file-name">{image.name}</p>}
+
+          {image && <p>{image.name}</p>}
         </div>
 
-        {uploading && <LinearProgress color="secondary" />}
+        {uploading && <LinearProgress />}
 
-        <Button variant="contained" color="primary" type="submit" disabled={loading || uploading}>
+        <Button
+          variant="contained"
+          type="submit"
+          disabled={loading || uploading}
+        >
           {loading ? "Posting..." : "Post Notice"}
         </Button>
       </Box>
 
-      <Snackbar open={openSnack} autoHideDuration={3000} onClose={() => setOpenSnack(false)} message="✅ Notice posted successfully!" />
+      <Snackbar
+        open={openSnack}
+        autoHideDuration={3000}
+        onClose={() => setOpenSnack(false)}
+        message="✅ Notice posted successfully!"
+      />
     </Paper>
   );
 }

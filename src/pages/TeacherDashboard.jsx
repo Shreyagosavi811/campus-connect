@@ -1,27 +1,31 @@
 import { useEffect, useState } from "react";
-import { db } from "../firebase";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { Container, Typography, Grid, Paper } from "@mui/material";
 import CountUp from "react-countup";
 import "../styles/TeacherDashboard.css";
 
 export default function TeacherDashboard() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [students, setStudents] = useState([]);
 
-  // Fetch students in real-time
+  // Fetch students in real-time equivalent
   useEffect(() => {
     if (!user?.department) return;
-    const q = query(
-      collection(db, "users"),
-      where("department", "==", user.department),
-      where("role", "==", "student")
-    );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setStudents(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-    });
-    return () => unsubscribe();
+    const fetchStudents = async () => {
+      try {
+        const res = await axios.get("http://localhost:8080/api/users");
+        const deptStudents = res.data.filter(u => 
+          u.department === user.department && u.role?.toUpperCase() === "STUDENT"
+        );
+        setStudents(deptStudents);
+      } catch (error) {
+        console.error("Failed to fetch students:", error);
+      }
+    };
+    fetchStudents();
   }, [user]);
 
   // Compute total stats
@@ -35,6 +39,7 @@ export default function TeacherDashboard() {
     { label: "Total Students", count: totalStats.totalStudents, color: "#2563eb" },
     { label: "Approved Students", count: totalStats.approvedStudents, color: "#16a34a" },
     { label: "Pending Approvals", count: totalStats.pendingStudents, color: "#f59e0b" },
+    { label: "Fees Management", count: totalStats.totalStudents, color: "#8b5cf6", path: "/fees" },
   ];
 
   // Compute year-wise counts
@@ -58,8 +63,12 @@ export default function TeacherDashboard() {
           <Grid item xs={12} sm={6} md={4} key={index}>
             <Paper
               className="stats-card"
-              style={{ borderTop: `5px solid ${card.color}` }}
+              style={{ 
+                borderTop: `5px solid ${card.color}`,
+                cursor: card.path ? "pointer" : "default"
+              }}
               elevation={6}
+              onClick={() => card.path && navigate(card.path)}
             >
               <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 500 }}>
                 {card.label}

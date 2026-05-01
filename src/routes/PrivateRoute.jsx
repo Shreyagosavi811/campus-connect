@@ -1,16 +1,23 @@
 import { Navigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
 
-export default function PrivateRoute({ allowedRoles, children }) {
-  const { user, loading } = useAuth();
+export default function PrivateRoute({ children, allowedRoles }) {
+  const user = JSON.parse(localStorage.getItem("user"));
 
-  if (loading) return <div>Loading...</div>;
+  console.log("PRIVATE ROUTE USER:", user);
 
-  if (!user) return <Navigate to="/" replace />;
-
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/home" replace />;
+  if (!user) {
+    return <Navigate to="/" replace />;
   }
 
+  const role = user.role?.trim().toLowerCase();
+
+  console.log("ROLE CHECK:", role, allowedRoles);
+
+  if (!allowedRoles.map(r => r.toLowerCase()).includes(role)) {
+    return <Navigate to="/home" replace />;
+  }
+console.log("ALLOWED:", allowedRoles);
+console.log("USER ROLE:", role);
+console.log("MATCH:", allowedRoles.includes(role));
   return children;
 }
