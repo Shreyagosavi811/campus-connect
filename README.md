@@ -1,6 +1,6 @@
 # 🎓 Campus Connect
 
-**Elevating University Management with a Unified Digital Ecosystem.**
+**Elevating College/University Management with a Unified Digital Ecosystem.**
 
 Campus Connect is a comprehensive, multi-role web platform designed to streamline academic administration, enhance student engagement, and simplify campus utility services. Built with a modern tech stack, it provides a seamless experience for students, faculty, and administrators.
 
