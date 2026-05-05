@@ -1,4 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap');
+
+@import "tailwindcss";
 
 /* index.css - minimal resets and base styles */
 html, body, #root {
@@ -6,7 +8,9 @@ html, body, #root {
     width: 100%;
     margin: 0;
     padding: 0;
-    font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 body {
@@ -30,12 +34,19 @@ body {
 
 h1, h2, h3, h4, h5, h6 {
     margin: 0;
-    font-weight: 600;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    font-feature-settings: "cv11", "ss01";
+}
+
+p {
+    line-height: 1.6;
+    letter-spacing: -0.01em;
 }
 
 a {
     text-decoration: none;
-    font-weight: 500;
+    font-weight: 600;
 }
 
 button {
@@ -43,4 +54,5 @@ button {
     cursor: pointer;
     border-radius: 12px;
     border: 1px solid transparent;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }

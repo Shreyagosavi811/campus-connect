@@ -1,21 +1,8 @@
-// src/components/Navbar.jsx
-import {
-  AppBar,
-  Toolbar,
-  Typography,
-  Button,
-  Box,
-  IconButton,
-  Drawer,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemButton,
-} from "@mui/material";
-import MenuIcon from "@mui/icons-material/Menu";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, NavLink } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import Logo from "./Logo";
 
 export default function Navbar() {
   const { user, setUser } = useAuth();
@@ -27,7 +14,7 @@ export default function Navbar() {
     if (storedUser && !user) {
       setUser(JSON.parse(storedUser));
     }
-  }, []);
+  }, [user, setUser]);
 
   const handleLogout = () => {
     setUser(null);
@@ -36,147 +23,141 @@ export default function Navbar() {
     navigate("/");
   };
 
-  const toggleMobileMenu = () => {
-    setMobileOpen(!mobileOpen);
-  };
+  const toggleMobileMenu = () => setMobileOpen(!mobileOpen);
 
   const role = user?.role?.trim().toUpperCase();
 
-  // Base links
   const links = [
     { label: "Home", path: "/home" },
     { label: "Notices", path: "/notices" },
+    { label: "Events", path: "/events" },
     { label: "Lost & Found", path: "/lostfound" },
     { label: "Mentorship & Queries", path: "/queries" },
   ];
 
   if (role === "ADMIN") {
     links.push({ label: "Admin Panel", path: "/admin" });
-    links.push({ label: "Fees Management", path: "/fees" });
-  }
-
-  if (role === "HOD") {
+    links.push({ label: "Fees", path: "/fees" });
+  } else if (role === "HOD") {
     links.push({ label: "HOD Panel", path: "/hod" });
-    links.push({ label: "Fees Management", path: "/fees" });
-  }
-
-  if (role === "TEACHER") {
+    links.push({ label: "Fees", path: "/fees" });
+  } else if (role === "TEACHER") {
     links.push({ label: "Teacher Panel", path: "/teacher" });
-    links.push({ label: "Fees Management", path: "/fees" });
-  }
-
-  if (role === "STUDENT") {
+    links.push({ label: "Fees", path: "/fees" });
+  } else if (role === "STUDENT") {
     links.push({ label: "My Fees", path: "/student" });
   }
 
   return (
-    <AppBar 
-      position="sticky" 
-      elevation={0}
-      sx={{ 
-        background: 'rgba(255, 255, 255, 0.7)',
-        backdropFilter: 'blur(16px)',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.3)',
-        color: '#1E293B',
-        mb: 4
-      }}
-    >
-      <Toolbar sx={{ justifyContent: "space-between" }}>
-        <Typography variant="h5" sx={{ fontWeight: 700, background: 'linear-gradient(135deg, #4F46E5, #0EA5E9)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-          Campus Connect
-        </Typography>
+    <nav className="sticky top-0 z-40 bg-white/70 backdrop-blur-xl border-b border-white/30 shadow-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-20">
+          {/* Logo */}
+          <Link to="/home" className="flex items-center">
+            <Logo />
+          </Link>
 
-        {/* DESKTOP */}
-        <Box sx={{ display: { xs: "none", md: "flex" }, gap: 1, alignItems: 'center' }}>
-          {user &&
-            links.map((link) => (
-              <Button
+          {/* Desktop Links */}
+          <div className="hidden md:flex items-center gap-2">
+            {user && links.map((link) => (
+              <NavLink
                 key={link.label}
-                component={NavLink}
                 to={link.path}
-                sx={{ 
-                  color: '#475569', 
-                  fontWeight: 600,
-                  textTransform: 'none',
-                  background: 'transparent',
-                  boxShadow: 'none',
-                  '&:hover': { background: 'rgba(79, 70, 229, 0.1)', color: '#4F46E5', transform: 'none', boxShadow: 'none' },
-                  '&.active': { background: 'rgba(79, 70, 229, 0.15)', color: '#4F46E5' }
-                }}
+                className={({ isActive }) => 
+                  `px-4 py-2 rounded-xl text-sm font-bold transition-all duration-200 ${
+                    isActive 
+                      ? "bg-indigo-100 text-indigo-600" 
+                      : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                  }`
+                }
               >
                 {link.label}
-              </Button>
+              </NavLink>
             ))}
 
+            {user && (
+              <button 
+                onClick={handleLogout}
+                className="ml-4 px-6 py-2 bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white text-sm font-black uppercase rounded-xl shadow-lg shadow-rose-200 transition-all active:scale-95"
+              >
+                Logout
+              </button>
+            )}
+          </div>
+
+          {/* Mobile Menu Button */}
           {user && (
-            <Button 
-              onClick={handleLogout}
-              sx={{ 
-                ml: 2,
-                background: 'linear-gradient(135deg, #F43F5E, #E11D48)',
-                color: 'white',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #E11D48, #BE123C)',
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 4px 12px rgba(225, 29, 72, 0.3)'
-                }
-              }}
-            >
-              Logout
-            </Button>
+            <div className="md:hidden">
+              <button 
+                onClick={toggleMobileMenu}
+                className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
+              >
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+            </div>
           )}
-        </Box>
+        </div>
+      </div>
 
-        {/* MOBILE */}
-        {user && (
+      {/* Mobile Drawer Overlay */}
+      <AnimatePresence>
+        {mobileOpen && (
           <>
-            <IconButton
-              edge="end"
-              sx={{ display: { xs: "block", md: "none" }, color: '#4F46E5' }}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               onClick={toggleMobileMenu}
+              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 md:hidden"
+            />
+            <motion.div 
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="fixed top-0 right-0 bottom-0 w-72 bg-white/90 backdrop-blur-2xl shadow-2xl z-50 md:hidden p-6"
             >
-              <MenuIcon />
-            </IconButton>
+              <div className="flex justify-end mb-8">
+                <button onClick={toggleMobileMenu} className="p-2 text-slate-400 hover:text-slate-600">
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
 
-            <Drawer 
-              anchor="right" 
-              open={mobileOpen} 
-              onClose={toggleMobileMenu}
-              PaperProps={{
-                sx: { width: 250, background: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(16px)' }
-              }}
-            >
-              <List sx={{ pt: 4 }}>
+              <div className="flex flex-col gap-4">
                 {links.map((link) => (
-                  <ListItem key={link.label} disablePadding>
-                    <ListItemButton
-                      component={Link}
-                      to={link.path}
-                      onClick={toggleMobileMenu}
-                      sx={{ py: 1.5 }}
-                    >
-                      <ListItemText primary={link.label} primaryTypographyProps={{ fontWeight: 600, color: '#1E293B' }} />
-                    </ListItemButton>
-                  </ListItem>
+                  <NavLink
+                    key={link.label}
+                    to={link.path}
+                    onClick={toggleMobileMenu}
+                    className={({ isActive }) => 
+                      `px-6 py-4 rounded-2xl text-lg font-black tracking-tight transition-all ${
+                        isActive 
+                          ? "bg-indigo-100 text-indigo-600 translate-x-2" 
+                          : "text-slate-500 hover:bg-slate-50"
+                      }`
+                    }
+                  >
+                    {link.label}
+                  </NavLink>
                 ))}
 
-                <ListItem
-                  disablePadding
-                  onClick={() => {
-                    handleLogout();
-                    toggleMobileMenu();
-                  }}
-                  sx={{ mt: 2 }}
+                <div className="h-px bg-slate-100 my-4" />
+
+                <button 
+                  onClick={handleLogout}
+                  className="w-full px-6 py-4 bg-rose-50 text-rose-600 text-lg font-black uppercase rounded-2xl text-left hover:bg-rose-100 transition-colors"
                 >
-                  <ListItemButton>
-                    <ListItemText primary="Logout" primaryTypographyProps={{ fontWeight: 600, color: '#E11D48' }} />
-                  </ListItemButton>
-                </ListItem>
-              </List>
-            </Drawer>
+                  Logout
+                </button>
+              </div>
+            </motion.div>
           </>
         )}
-      </Toolbar>
-    </AppBar>
+      </AnimatePresence>
+    </nav>
   );
 }

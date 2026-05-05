@@ -1,507 +1,302 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
-import { useAuth } from "./context/AuthContext";
-import {
-  Container, Typography, Box, TextField, Select, MenuItem,
-  Button, Grid, Paper, Avatar, Dialog, DialogTitle, DialogContent, 
-  DialogActions, InputAdornment, Chip, Divider, Tabs, Tab,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, Tooltip, Switch
-} from "@mui/material";
-import SearchIcon from "@mui/icons-material/Search";
-import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
-import PersonIcon from '@mui/icons-material/Person';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import "./styles/TeacherDashboard.css";
+import { useState, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
-function TabPanel({ children, value, index }) {
-  return (
-    <div hidden={value !== index}>
-      {value === index && <Box sx={{ mt: 2 }}>{children}</Box>}
-    </div>
-  );
-}
+import { useAuth } from "./context/AuthContext";
+import { useFinanceData } from "./hooks/useFinanceData";
+
+// Components
+import FinanceStats from "./components/Finance/FinanceStats";
+import StudentFeesTable from "./components/Finance/StudentFeesTable";
+import AccessManagement from "./components/Finance/AccessManagement";
+import { 
+  AssignFeeDialog, LogPaymentDialog, StudentDetailsDialog 
+} from "./components/Finance/FinanceModals";
 
 export default function FinancePanel() {
   const { user } = useAuth();
-  const [students, setStudents] = useState([]);
-  const [fees, setFees] = useState([]);
+  const { 
+    students, fees, allPlatformUsers, loading, error,
+    toggleUserAccess, getStudentTransactions, assignFee, logPayment 
+  } = useFinanceData(user);
+
   const [search, setSearch] = useState("");
   const [masterTab, setMasterTab] = useState(0);
   const [tabIndex, setTabIndex] = useState(0);
-  const [selectedStudent, setSelectedStudent] = useState(null);
-  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
-  const [isPayModalOpen, setIsPayModalOpen] = useState(false);
-  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const [studentTransactions, setStudentTransactions] = useState([]);
   
+  // Modal States
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [transactions, setTransactions] = useState([]);
+  const [isAssignOpen, setIsAssignOpen] = useState(false);
+  const [isPayOpen, setIsPayOpen] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+
   const [feeForm, setFeeForm] = useState({ 
     totalFees: "", paidFees: "", 
     tuitionFee: "", libraryFee: "", hostelFee: "", examFee: "", semester: "Semester 1",
     paymentMethod: "Cash", referenceNumber: ""
   });
 
-  const API_USERS = "http://localhost:8080/api/users";
-  const API_FEES = "http://localhost:8080/api/fees";
-
+  // Access check
   if (user && user.role?.toUpperCase() !== "ADMIN" && !user.financeAccess) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 10, textAlign: 'center' }}>
-        <Paper sx={{ p: 5, borderRadius: '20px', borderTop: '5px solid #F43F5E' }}>
-          <Typography variant="h5" color="error" fontWeight="bold">Access Denied</Typography>
-          <Typography variant="body1" sx={{ mt: 2, color: '#475569' }}>You do not have permission to access the Finance Management Panel. Please contact an Administrator to grant you access.</Typography>
-        </Paper>
-      </Container>
+      <div className="container mx-auto max-w-2xl mt-24 px-4">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="bg-white p-12 text-center rounded-[2.5rem] shadow-2xl border-t-[12px] border-rose-500">
+            <h1 className="text-4xl font-black text-rose-600 mb-4 uppercase tracking-tighter">Access Denied</h1>
+            <p className="text-slate-500 font-medium text-lg leading-relaxed">
+              You do not have permission to access the Finance Panel. <br/> 
+              <span className="text-slate-400 text-sm mt-4 block italic">Please contact an administrator to request access.</span>
+            </p>
+          </div>
+        </motion.div>
+      </div>
     );
   }
 
-  const fetchData = async () => {
-    try {
-      const [usersRes, feesRes] = await Promise.all([
-        axios.get(API_USERS),
-        axios.get(API_FEES)
-      ]);
-      const allUsers = Array.isArray(usersRes.data) ? usersRes.data : [];
-      const allFees = Array.isArray(feesRes.data) ? feesRes.data : [];
-      let deptStudents = allUsers.filter(u => u.role?.toUpperCase() === "STUDENT");
-      if (user?.role?.toUpperCase() !== "ADMIN") {
-        deptStudents = deptStudents.filter(u => u.department?.toLowerCase() === user?.department?.toLowerCase());
-      }
-      setStudents(deptStudents);
-      // For the Access Management tab, store all users EXCEPT students
-      setAllPlatformUsers(allUsers.filter(u => u.role?.toUpperCase() !== "STUDENT"));
-      setFees(allFees);
-    } catch (error) {
-      console.error("Fetch error:", error);
-    }
-  };
-
-  const [allPlatformUsers, setAllPlatformUsers] = useState([]);
-
-  const toggleUserAccess = async (targetUser) => {
-    try {
-      const updatedUser = { ...targetUser, financeAccess: !targetUser.financeAccess };
-      await axios.put(`${API_USERS}/${targetUser.id}`, updatedUser);
-      fetchData(); // Refresh the list
-    } catch (e) {
-      alert("Error updating user access");
-    }
-  };
-
-  useEffect(() => {
-    if (user) fetchData();
-  }, [user]);
-
-  const handleOpenStudentDetails = async (student) => {
-    setSelectedStudent(student);
-    setIsDetailsModalOpen(true);
-    setStudentTransactions([]);
-    try {
-      const res = await axios.get(`http://localhost:8080/api/transactions/user/${student.id}`);
-      setStudentTransactions(res.data);
-    } catch (e) {
-      console.error("Failed to fetch transactions");
-    }
-  };
-
-  const highlight = (text, query) => {
-    if (!query) return text;
-    const regex = new RegExp(`(${query})`, "gi");
-    return text?.split(regex).map((part, i) =>
-      part.toLowerCase() === query.toLowerCase()
-        ? <span key={i} style={{ backgroundColor: "#ffff00" }}>{part}</span>
-        : part
-    );
-  };
-
+  // Helpers
   const getStudentFeeRecord = (studentId) => {
     return fees.find(f => (f.user && f.user.id === studentId) || (f.userId === studentId));
   };
 
-  const handleAssignFee = async () => {
+  const highlight = (text, query) => {
+    if (!query) return text;
+    const parts = text?.split(new RegExp(`(${query})`, "gi"));
+    return parts.map((part, i) => 
+      part.toLowerCase() === query.toLowerCase() 
+        ? <span key={i} className="bg-amber-200 px-1 rounded text-amber-900">{part}</span> 
+        : part
+    );
+  };
+
+  // Calculations
+  const stats = useMemo(() => {
+    const totalExpected = fees.reduce((acc, f) => acc + (f.totalFees || 0), 0);
+    const totalCollected = fees.reduce((acc, f) => acc + (f.paidFees || 0), 0);
+    return {
+      totalExpected,
+      totalCollected,
+      totalPending: totalExpected - totalCollected
+    };
+  }, [fees]);
+
+  const filteredStudents = useMemo(() => {
+    const list = [
+      students,
+      students.filter(s => !getStudentFeeRecord(s.id)),
+      students.filter(s => { const r = getStudentFeeRecord(s.id); return r && r.status !== 'Paid'; }),
+      students.filter(s => { const r = getStudentFeeRecord(s.id); return r && r.status === 'Paid'; })
+    ];
+    return (list[tabIndex] || []).filter(s => 
+      s.name?.toLowerCase().includes(search.toLowerCase()) ||
+      s.email?.toLowerCase().includes(search.toLowerCase())
+    );
+  }, [students, fees, tabIndex, search]);
+
+  // Handlers
+  const handleOpenDetails = async (student) => {
+    setSelectedStudent(student);
+    setIsDetailsOpen(true);
+    const txs = await getStudentTransactions(student.id);
+    setTransactions(txs);
+  };
+
+  const handleAssignClick = (student) => {
+    setSelectedStudent(student);
+    setFeeForm({ 
+      tuitionFee: "", libraryFee: "", hostelFee: "", examFee: "", 
+      semester: "Semester 1", paidFees: 0, paymentMethod: "Cash", referenceNumber: "" 
+    });
+    setIsAssignOpen(true);
+  };
+
+  const handlePayClick = (student) => {
+    setSelectedStudent(student);
+    setFeeForm({ paidFees: 0, paymentMethod: "Cash", referenceNumber: "" });
+    setIsPayOpen(true);
+  };
+
+  const submitAssign = async () => {
     const tuition = Number(feeForm.tuitionFee) || 0;
     const library = Number(feeForm.libraryFee) || 0;
     const hostel = Number(feeForm.hostelFee) || 0;
     const exam = Number(feeForm.examFee) || 0;
     const total = tuition + library + hostel + exam;
 
-    if (total === 0 || !selectedStudent) return alert("Total fee cannot be zero");
-    try {
-      await axios.post(API_FEES, {
-        totalFees: total,
-        paidFees: Number(feeForm.paidFees) || 0,
-        tuitionFee: tuition,
-        libraryFee: library,
-        hostelFee: hostel,
-        examFee: exam,
-        semester: feeForm.semester,
-        user: { id: selectedStudent.id }
-      });
-      setIsAssignModalOpen(false);
-      fetchData();
-    } catch (e) { alert("Error assigning fee"); }
+    const success = await assignFee({
+      totalFees: total,
+      paidFees: Number(feeForm.paidFees) || 0,
+      tuitionFee: tuition,
+      libraryFee: library,
+      hostelFee: hostel,
+      examFee: exam,
+      semester: feeForm.semester,
+      user: { id: selectedStudent.id }
+    });
+
+    if (success) setIsAssignOpen(false);
   };
 
-  const handleLogPayment = async () => {
-    if (!feeForm.paidFees || !selectedStudent) return alert("Amount required");
-    try {
-      const rec = getStudentFeeRecord(selectedStudent.id);
-      const paymentAmount = Number(feeForm.paidFees);
-      const paid = Number(rec.paidFees) + paymentAmount;
-      
-      await axios.put(`${API_FEES}/${rec.id}`, {
-        id: rec.id,
-        totalFees: rec.totalFees,
-        paidFees: paid,
-        remainingFees: rec.totalFees - paid,
-        status: (rec.totalFees - paid) <= 0 ? "Paid" : "Pending",
-        paymentMethod: feeForm.paymentMethod,
-        referenceNumber: feeForm.referenceNumber,
-        user: { id: selectedStudent.id }
-      });
+  const submitPayment = async () => {
+    const rec = getStudentFeeRecord(selectedStudent.id);
+    const paymentAmount = Number(feeForm.paidFees);
+    const totalPaid = Number(rec.paidFees) + paymentAmount;
+    
+    const success = await logPayment(rec.id, {
+      id: rec.id,
+      totalFees: rec.totalFees,
+      paidFees: totalPaid,
+      remainingFees: rec.totalFees - totalPaid,
+      status: (rec.totalFees - totalPaid) <= 0 ? "Paid" : "Pending",
+      paymentMethod: feeForm.paymentMethod,
+      referenceNumber: feeForm.referenceNumber,
+      user: { id: selectedStudent.id }
+    });
 
-      setIsPayModalOpen(false);
-      fetchData();
-    } catch (e) { alert("Error logging payment"); }
+    if (success) setIsPayOpen(false);
   };
-
-  const totalExpected = fees.reduce((acc, f) => acc + (f.totalFees || 0), 0);
-  const totalCollected = fees.reduce((acc, f) => acc + (f.paidFees || 0), 0);
-  const totalPending = totalExpected - totalCollected;
-
-  const tabs = ["All", "Unassigned", "Pending", "Paid"];
-  const filteredList = [
-    students,
-    students.filter(s => !getStudentFeeRecord(s.id)),
-    students.filter(s => { const r = getStudentFeeRecord(s.id); return r && r.status !== 'Paid'; }),
-    students.filter(s => { const r = getStudentFeeRecord(s.id); return r && r.status === 'Paid'; })
-  ];
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" sx={{ mb: 2, fontWeight: "bold", textAlign: 'center', color: '#4F46E5' }}>
-        Fees Management
-      </Typography>
+    <div className="min-h-screen bg-slate-50/50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
+          <header className="text-center mb-12">
+            <h1 className="text-5xl font-black text-slate-900 tracking-tighter uppercase mb-2">
+              Finance <span className="text-indigo-600 italic">Panel</span>
+            </h1>
+            <p className="text-slate-400 font-bold tracking-widest text-xs uppercase">University Management System</p>
+          </header>
 
-      {user?.role?.toUpperCase() === "ADMIN" && (
-        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3, display: 'flex', justifyContent: 'center' }}>
-          <Tabs value={masterTab} onChange={(e, n) => setMasterTab(n)} centered sx={{ '& .MuiTabs-flexContainer': { gap: 2 } }}>
-            <Tab label="Fees Dashboard" sx={{ fontWeight: 'bold' }} />
-            <Tab label="Access Management" sx={{ fontWeight: 'bold' }} />
-          </Tabs>
-        </Box>
-      )}
-
-      {/* FEES DASHBOARD (Tab 0) */}
-      <TabPanel value={masterTab} index={0}>
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-        {[
-          { label: "Expected", val: totalExpected, col: "#4F46E5" },
-          { label: "Collected", val: totalCollected, col: "#10B981" },
-          { label: "Outstanding", val: totalPending, col: "#F43F5E" }
-        ].map((stat, idx) => (
-          <Grid item xs={12} md={4} key={idx}>
-            <Paper sx={{ p: 3, borderRadius: '15px', borderLeft: `6px solid ${stat.col}` }}>
-              <Typography variant="body2" color="textSecondary">{stat.label}</Typography>
-              <Typography variant="h5" fontWeight="bold">₹{stat.val.toLocaleString()}</Typography>
-            </Paper>
-          </Grid>
-        ))}
-      </Grid>
-
-      <Grid container spacing={3}>
-        <Grid item xs={12}>
-          <Paper sx={{ p: 2 }}>
-            <Box display="flex" flexWrap="wrap" justifyContent="space-between" alignItems="center" mb={3} gap={2}>
-              <Tabs value={tabIndex} onChange={(e, n) => setTabIndex(n)} sx={{ '& .MuiTabs-flexContainer': { gap: 2 } }}>
-                {tabs.map((t, i) => <Tab key={i} label={t} />)}
-              </Tabs>
-              <TextField 
-                size="small" 
-                placeholder="Search students..." 
-                value={search} 
-                onChange={e => setSearch(e.target.value)}
-                sx={{ minWidth: '250px', bgcolor: '#f8fafc', borderRadius: 1 }}
-                InputProps={{
-                  startAdornment: <SearchIcon color="action" sx={{ mr: 1 }} />
-                }}
-              />
-            </Box>
-
-            <TabPanel value={tabIndex} index={tabIndex}>
-              <TableContainer sx={{ border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.05)', overflowX: 'auto' }}>
-                <Table sx={{ minWidth: 800 }}>
-                  <TableHead>
-                    <TableRow sx={{ bgcolor: '#f8fafc', '& th': { borderBottom: '2px solid #e2e8f0' } }}>
-                      <TableCell sx={{ fontWeight: 'bold', color: '#475569', whiteSpace: 'nowrap' }}>Student</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', color: '#475569', whiteSpace: 'nowrap' }}>Year</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', color: '#475569', whiteSpace: 'nowrap' }}>Department</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', color: '#475569', whiteSpace: 'nowrap' }}>Semester</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', color: '#475569', whiteSpace: 'nowrap' }}>Total Fees</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', color: '#475569', whiteSpace: 'nowrap' }}>Paid</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', color: '#475569', whiteSpace: 'nowrap' }}>Due</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', color: '#475569', whiteSpace: 'nowrap' }}>Status</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', color: '#475569', whiteSpace: 'nowrap' }} align="center">Action</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {filteredList[tabIndex]
-                      .filter(s => s.name?.toLowerCase().includes(search.toLowerCase()))
-                      .map(s => {
-                        const r = getStudentFeeRecord(s.id);
-                        return (
-                          <TableRow key={s.id} sx={{ '&:last-child td, &:last-child th': { border: 0 }, transition: '0.2s', '&:hover': { bgcolor: '#f8fafc', transform: 'scale(1.002)', boxShadow: '0 2px 10px rgba(0,0,0,0.02)' } }}>
-                            <TableCell>
-                              <Box 
-                                display="flex" 
-                                alignItems="center" 
-                                gap={2} 
-                                sx={{ cursor: 'pointer', '&:hover .student-name': { color: '#4F46E5', textDecoration: 'underline' } }}
-                                onClick={() => handleOpenStudentDetails(s)}
-                              >
-                                <Avatar sx={{ width: 32, height: 32, bgcolor: '#e0e7ff', color: '#4f46e5' }}><PersonIcon fontSize="small" /></Avatar>
-                                <Typography className="student-name" fontWeight="bold" sx={{ color: '#1e293b', transition: '0.2s' }}>{highlight(s.name, search)}</Typography>
-                              </Box>
-                            </TableCell>
-                            <TableCell>{s.year || '-'}</TableCell>
-                            <TableCell>{s.department}</TableCell>
-                            <TableCell>
-                              {r && r.semester ? <Chip label={r.semester} size="small" color="primary" variant="outlined" /> : <Typography variant="body2" color="textSecondary">-</Typography>}
-                            </TableCell>
-                            <TableCell>
-                              {r ? <Typography fontWeight="500">₹{r.totalFees}</Typography> : '-'}
-                            </TableCell>
-                            <TableCell>
-                              {r ? <Typography fontWeight="500" sx={{ color: '#10B981' }}>₹{r.paidFees}</Typography> : '-'}
-                            </TableCell>
-                            <TableCell>
-                              {r ? <Typography fontWeight="500" sx={{ color: '#F43F5E' }}>₹{r.remainingFees}</Typography> : '-'}
-                            </TableCell>
-                            <TableCell>
-                              {r ? <Chip label={r.status} size="small" sx={{ bgcolor: r.status === 'Paid' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)', color: r.status === 'Paid' ? '#10B981' : '#F59E0B', fontWeight: 'bold' }} /> : <Chip label="Unassigned" size="small" sx={{ bgcolor: '#f1f5f9', color: '#64748b' }} />}
-                            </TableCell>
-                            <TableCell align="center">
-                              {!r ? (
-                                <Button variant="contained" size="small" sx={{ whiteSpace: 'nowrap', minWidth: '70px' }} onClick={()=>{
-                                  setSelectedStudent(s);
-                                  setFeeForm({ tuitionFee: "", libraryFee: "", hostelFee: "", examFee: "", semester: "Semester 1", paidFees: 0, paymentMethod: "Cash", referenceNumber: "" });
-                                  setIsAssignModalOpen(true);
-                                }}>Assign</Button>
-                              ) : r.status !== 'Paid' ? (
-                                <Button variant="outlined" size="small" sx={{ whiteSpace: 'nowrap', minWidth: '70px' }} onClick={()=>{
-                                  setSelectedStudent(s);
-                                  setFeeForm(prev => ({ ...prev, paidFees: 0, paymentMethod: "Cash", referenceNumber: "" }));
-                                  setIsPayModalOpen(true);
-                                }}>Pay</Button>
-                              ) : (
-                                <Button disabled size="small" sx={{ whiteSpace: 'nowrap', minWidth: '70px' }}>Paid</Button>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        )
-                      })}
-                      {filteredList[tabIndex].filter(s => s.name?.toLowerCase().includes(search.toLowerCase())).length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
-                            <Typography color="textSecondary">No students found.</Typography>
-                          </TableCell>
-                        </TableRow>
-                      )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </TabPanel>
-          </Paper>
-        </Grid>
-      </Grid>
-      </TabPanel>
-
-      {/* ACCESS MANAGEMENT (Tab 1 - Admins Only) */}
-      {user?.role?.toUpperCase() === "ADMIN" && (
-        <TabPanel value={masterTab} index={1}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" fontWeight="bold" sx={{ mb: 3, color: '#1e293b' }}>
-              Platform Access Control
-            </Typography>
-            <TableContainer sx={{ border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.05)', overflowX: 'auto' }}>
-              <Table sx={{ minWidth: 700 }}>
-                <TableHead>
-                  <TableRow sx={{ bgcolor: '#f8fafc', '& th': { borderBottom: '2px solid #e2e8f0' } }}>
-                    <TableCell sx={{ fontWeight: 'bold', color: '#475569', whiteSpace: 'nowrap' }}>Name</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', color: '#475569', whiteSpace: 'nowrap' }}>Email</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', color: '#475569', whiteSpace: 'nowrap' }}>Role</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', color: '#475569', whiteSpace: 'nowrap' }}>Department</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', color: '#475569', whiteSpace: 'nowrap' }} align="center">Access Status</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {allPlatformUsers.map(u => (
-                    <TableRow key={u.id} sx={{ '&:last-child td, &:last-child th': { border: 0 }, transition: '0.2s', '&:hover': { bgcolor: '#f8fafc' } }}>
-                      <TableCell sx={{ fontWeight: 'bold' }}>{u.name}</TableCell>
-                      <TableCell>{u.email}</TableCell>
-                      <TableCell>
-                        <Chip label={u.role} size="small" color={u.role === 'ADMIN' ? 'error' : u.role === 'HOD' ? 'secondary' : 'primary'} />
-                      </TableCell>
-                      <TableCell>{u.department || '-'}</TableCell>
-                      <TableCell align="center">
-                        <Switch 
-                          checked={!!u.financeAccess} 
-                          onChange={() => toggleUserAccess(u)} 
-                          color="success"
-                          disabled={u.id === user.id} // Prevent admin from locking themselves out
-                        />
-                        <Typography variant="caption" display="block" color={u.financeAccess ? "success.main" : "error.main"} fontWeight="bold">
-                          {u.financeAccess ? "Granted" : "Revoked"}
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Paper>
-        </TabPanel>
-      )}
-
-      <Dialog open={isAssignModalOpen} onClose={()=>setIsAssignModalOpen(false)}>
-        <DialogTitle>Assign University Fee</DialogTitle>
-        <DialogContent>
-          <Select
-            fullWidth
-            sx={{ mt: 2 }}
-            value={feeForm.semester || "Semester 1"}
-            onChange={e=>setFeeForm({...feeForm, semester: e.target.value})}
-          >
-            <MenuItem value="Semester 1">Semester 1</MenuItem>
-            <MenuItem value="Semester 2">Semester 2</MenuItem>
-            <MenuItem value="Semester 3">Semester 3</MenuItem>
-            <MenuItem value="Semester 4">Semester 4</MenuItem>
-            <MenuItem value="Semester 5">Semester 5</MenuItem>
-            <MenuItem value="Semester 6">Semester 6</MenuItem>
-            <MenuItem value="Semester 7">Semester 7</MenuItem>
-            <MenuItem value="Semester 8">Semester 8</MenuItem>
-          </Select>
-          <TextField label="Tuition Fee" fullWidth type="number" sx={{ mt: 2 }} value={feeForm.tuitionFee} onChange={e=>setFeeForm({...feeForm,tuitionFee:e.target.value})} />
-          <TextField label="Library Fee" fullWidth type="number" sx={{ mt: 2 }} value={feeForm.libraryFee} onChange={e=>setFeeForm({...feeForm,libraryFee:e.target.value})} />
-          <TextField label="Hostel Fee" fullWidth type="number" sx={{ mt: 2 }} value={feeForm.hostelFee} onChange={e=>setFeeForm({...feeForm,hostelFee:e.target.value})} />
-          <TextField label="Exam Fee" fullWidth type="number" sx={{ mt: 2 }} value={feeForm.examFee} onChange={e=>setFeeForm({...feeForm,examFee:e.target.value})} />
-          
-          <Box sx={{ mt: 3, p: 2, bgcolor: '#f8fafc', borderRadius: 2 }}>
-            <Typography variant="subtitle1" fontWeight="bold">
-              Total Calculated: ₹{(Number(feeForm.tuitionFee)||0) + (Number(feeForm.libraryFee)||0) + (Number(feeForm.hostelFee)||0) + (Number(feeForm.examFee)||0)}
-            </Typography>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={()=>setIsAssignModalOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleAssignFee}>Assign</Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog open={isPayModalOpen} onClose={()=>setIsPayModalOpen(false)}>
-        <DialogTitle>Log Payment</DialogTitle>
-        <DialogContent>
-          <Typography sx={{ mt: 2 }}>Due: ₹{selectedStudent && getStudentFeeRecord(selectedStudent.id)?.remainingFees}</Typography>
-          <TextField label="Amount" fullWidth type="number" sx={{ mt: 2 }} value={feeForm.paidFees} onChange={e=>setFeeForm({...feeForm,paidFees:e.target.value})} />
-          
-          <Select
-            fullWidth
-            sx={{ mt: 2 }}
-            value={feeForm.paymentMethod || "Cash"}
-            onChange={e=>setFeeForm({...feeForm, paymentMethod: e.target.value})}
-          >
-            <MenuItem value="Cash">Cash</MenuItem>
-            <MenuItem value="UPI">UPI</MenuItem>
-            <MenuItem value="Card">Credit/Debit Card</MenuItem>
-            <MenuItem value="Bank Transfer">Bank Transfer</MenuItem>
-          </Select>
-          
-          {feeForm.paymentMethod !== "Cash" && (
-            <TextField 
-              label="Reference / Transaction Number" 
-              fullWidth 
-              sx={{ mt: 2 }} 
-              value={feeForm.referenceNumber || ""} 
-              onChange={e=>setFeeForm({...feeForm, referenceNumber: e.target.value})} 
-            />
+          {error && (
+            <div className="bg-rose-50 border-l-4 border-rose-500 p-4 mb-8 rounded-xl shadow-sm">
+              <p className="text-rose-700 text-sm font-bold uppercase tracking-tight">{error}</p>
+            </div>
           )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={()=>setIsPayModalOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleLogPayment}>Save</Button>
-        </DialogActions>
-      </Dialog>
 
-      <Dialog open={isDetailsModalOpen} onClose={() => setIsDetailsModalOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ fontWeight: 'bold', borderBottom: '1px solid #e2e8f0', bgcolor: '#f8fafc' }}>
-          Student Details - {selectedStudent?.name}
-        </DialogTitle>
-        <DialogContent sx={{ mt: 2, p: 3, bgcolor: '#f1f5f9' }}>
-          {selectedStudent && (
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={5}>
-                <Paper sx={{ p: 3, borderRadius: '15px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}>
-                  <Typography variant="h6" fontWeight="bold" sx={{ mb: 2, color: '#1e293b' }}>Profile</Typography>
-                  <Typography variant="body2" sx={{ mb: 1.5, color: '#475569' }}><strong style={{ color: '#1e293b' }}>Email:</strong> {selectedStudent.email}</Typography>
-                  <Typography variant="body2" sx={{ mb: 1.5, color: '#475569' }}><strong style={{ color: '#1e293b' }}>Department:</strong> {selectedStudent.department}</Typography>
-                  <Typography variant="body2" sx={{ mb: 1.5, color: '#475569' }}><strong style={{ color: '#1e293b' }}>Year:</strong> {selectedStudent.year || '-'}</Typography>
-                  <Typography variant="body2" sx={{ mb: 1.5, color: '#475569' }}><strong style={{ color: '#1e293b' }}>Role:</strong> {selectedStudent.role}</Typography>
+          {user?.role?.toUpperCase() === "ADMIN" && (
+            <div className="flex justify-center mb-10">
+              <div className="bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200 flex gap-2">
+                {["Fees Dashboard", "Access Control"].map((tab, i) => (
+                  <button
+                    key={tab}
+                    onClick={() => setMasterTab(i)}
+                    className={`px-8 py-2.5 rounded-xl text-sm font-black uppercase tracking-tight transition-all ${
+                      masterTab === i 
+                        ? "bg-indigo-600 text-white shadow-lg shadow-indigo-100 scale-105" 
+                        : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <AnimatePresence mode="wait">
+            {masterTab === 0 ? (
+              <motion.div 
+                key="fees" 
+                initial={{ x: -20, opacity: 0 }} 
+                animate={{ x: 0, opacity: 1 }} 
+                exit={{ x: 20, opacity: 0 }}
+                className="space-y-8"
+              >
+                <FinanceStats {...stats} />
+
+                <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50/30 rounded-full blur-3xl -mr-16 -mt-16" />
                   
-                  <Divider sx={{ my: 3 }} />
-                  <Typography variant="h6" fontWeight="bold" sx={{ mb: 2, color: '#1e293b' }}>Fee Summary</Typography>
-                  {(() => {
-                    const r = getStudentFeeRecord(selectedStudent.id);
-                    if (!r) return <Typography variant="body2" color="textSecondary" sx={{ fontStyle: 'italic' }}>No university fees assigned yet.</Typography>;
-                    return (
-                      <Box>
-                        <Box display="flex" justifyContent="space-between" mb={1.5}><Typography variant="body2" sx={{ color: '#475569' }}>Total Fees:</Typography><Typography fontWeight="bold" sx={{ color: '#1e293b' }}>₹{r.totalFees}</Typography></Box>
-                        <Box display="flex" justifyContent="space-between" mb={1.5}><Typography variant="body2" sx={{ color: '#475569' }}>Paid Amount:</Typography><Typography fontWeight="bold" sx={{ color: '#10B981' }}>₹{r.paidFees}</Typography></Box>
-                        <Box display="flex" justifyContent="space-between" mb={1.5}><Typography variant="body2" sx={{ color: '#475569' }}>Outstanding Due:</Typography><Typography fontWeight="bold" sx={{ color: '#F43F5E' }}>₹{r.remainingFees}</Typography></Box>
-                        <Box display="flex" justifyContent="space-between" alignItems="center" mt={2}><Typography variant="body2" sx={{ color: '#475569' }}>Current Status:</Typography><Chip label={r.status} size="small" sx={{ fontWeight: 'bold', bgcolor: r.status === 'Paid' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)', color: r.status === 'Paid' ? '#10B981' : '#F59E0B' }} /></Box>
-                      </Box>
-                    );
-                  })()}
-                </Paper>
-              </Grid>
-              <Grid item xs={12} md={7}>
-                <Paper sx={{ p: 3, borderRadius: '15px', height: '100%', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}>
-                  <Typography variant="h6" fontWeight="bold" sx={{ mb: 2, color: '#1e293b' }}>Transaction History</Typography>
-                  {studentTransactions.length > 0 ? (
-                    <TableContainer sx={{ borderRadius: '10px', border: '1px solid #e2e8f0', overflowX: 'auto' }}>
-                      <Table size="small" sx={{ minWidth: 400 }}>
-                        <TableHead sx={{ bgcolor: '#f8fafc' }}>
-                          <TableRow>
-                            <TableCell sx={{ fontWeight: 'bold', color: '#475569', whiteSpace: 'nowrap' }}>Date</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold', color: '#475569', whiteSpace: 'nowrap' }}>Amount</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold', color: '#475569', whiteSpace: 'nowrap' }}>Method</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold', color: '#475569', whiteSpace: 'nowrap' }}>Transaction ID</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {studentTransactions.map(t => (
-                            <TableRow key={t.id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                              <TableCell sx={{ color: '#475569' }}>{new Date(t.date).toLocaleDateString()}</TableCell>
-                              <TableCell sx={{ fontWeight: 'bold', color: '#10B981' }}>+ ₹{t.amount}</TableCell>
-                              <TableCell sx={{ color: '#475569' }}>{t.paymentMethod || 'Cash'}</TableCell>
-                              <TableCell sx={{ color: '#475569' }}>{t.referenceNumber ? t.referenceNumber : `TXN-${t.id}`}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
+                  <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4 relative z-10">
+                    <div className="flex bg-slate-50 p-1.5 rounded-xl border border-slate-100 overflow-x-auto w-full lg:w-auto">
+                      {["All", "Unassigned", "Pending", "Paid"].map((t, i) => (
+                        <button 
+                          key={i} 
+                          onClick={() => setTabIndex(i)}
+                          className={`px-6 py-2 rounded-lg text-xs font-black uppercase tracking-tight whitespace-nowrap transition-all ${
+                            tabIndex === i ? "bg-white text-indigo-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                          }`}
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                    
+                    <div className="relative w-full lg:w-96">
+                      <input 
+                        type="text" 
+                        placeholder="Search student profile..." 
+                        value={search} 
+                        onChange={e => setSearch(e.target.value)}
+                        className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:bg-white focus:ring-2 focus:ring-indigo-600/10 focus:border-indigo-600 transition-all font-medium text-sm"
+                      />
+                      <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  {loading ? (
+                    <div className="flex flex-col items-center justify-center py-24 gap-4">
+                      <div className="w-12 h-12 border-4 border-slate-100 border-t-indigo-600 rounded-full animate-spin" />
+                      <p className="text-slate-400 font-black uppercase text-[10px] tracking-widest">Encrypting Data...</p>
+                    </div>
                   ) : (
-                    <Box textAlign="center" py={4} bgcolor="#f8fafc" borderRadius="10px">
-                      <Typography variant="body2" color="textSecondary">No transactions found for this student.</Typography>
-                    </Box>
+                    <StudentFeesTable 
+                      students={filteredStudents}
+                      search={search}
+                      getStudentFeeRecord={getStudentFeeRecord}
+                      onOpenDetails={handleOpenDetails}
+                      onAssign={handleAssignClick}
+                      onPay={handlePayClick}
+                      highlight={highlight}
+                    />
                   )}
-                </Paper>
-              </Grid>
-            </Grid>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ p: 2, bgcolor: '#ffffff', borderTop: '1px solid #e2e8f0' }}>
-          <Button onClick={() => setIsDetailsModalOpen(false)} variant="outlined" sx={{ borderRadius: '20px', textTransform: 'none' }}>Close Details</Button>
-        </DialogActions>
-      </Dialog>
-    </Container>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div 
+                key="access" 
+                initial={{ x: 20, opacity: 0 }} 
+                animate={{ x: 0, opacity: 1 }} 
+                exit={{ x: -20, opacity: 0 }}
+              >
+                <AccessManagement 
+                  users={allPlatformUsers} 
+                  currentUser={user} 
+                  onToggleAccess={toggleUserAccess} 
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      </div>
+
+      {/* Modals */}
+      <AssignFeeDialog 
+        open={isAssignOpen} 
+        onClose={() => setIsAssignOpen(false)}
+        form={feeForm}
+        setForm={setFeeForm}
+        onAssign={submitAssign}
+      />
+
+      <LogPaymentDialog 
+        open={isPayOpen} 
+        onClose={() => setIsPayOpen(false)}
+        student={selectedStudent}
+        feeRecord={getStudentFeeRecord(selectedStudent?.id)}
+        form={feeForm}
+        setForm={setFeeForm}
+        onPay={submitPayment}
+      />
+
+      <StudentDetailsDialog 
+        open={isDetailsOpen} 
+        onClose={() => setIsDetailsOpen(false)}
+        student={selectedStudent}
+        feeRecord={getStudentFeeRecord(selectedStudent?.id)}
+        transactions={transactions}
+      />
+    </div>
   );
 }

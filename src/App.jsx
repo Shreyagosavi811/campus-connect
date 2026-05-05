@@ -1,7 +1,7 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { ThemeProvider, CssBaseline } from "@mui/material";
+import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
-import theme from "./theme";
+import { ToastProvider } from "./context/ToastContext";
+import { motion, AnimatePresence } from "framer-motion";
 
 import PrivateRoute from "./routes/PrivateRoute";
 import Navbar from "./components/Navbar";
@@ -32,14 +32,32 @@ import StudentDashboard from "./pages/StudentDashboard";
 
 export default function App() {
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <AuthProvider>
+    <AuthProvider>
+      <ToastProvider>
         <Router>
+          <div className="min-h-screen bg-slate-50 selection:bg-indigo-100 selection:text-indigo-900">
+            <Navbar />
+            <AnimatedRoutes />
+          </div>
+        </Router>
+      </ToastProvider>
+    </AuthProvider>
+  );
+}
 
-          <Navbar />
-
-        <Routes>
+function AnimatedRoutes() {
+  const location = useLocation();
+  
+  return (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={location.pathname}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{ duration: 0.3 }}
+      >
+        <Routes location={location} key={location.pathname}>
 
           {/* ================= PUBLIC ================= */}
           <Route path="/" element={<Login />} />
@@ -141,8 +159,7 @@ export default function App() {
           />
 
         </Routes>
-      </Router>
-    </AuthProvider>
-    </ThemeProvider>
+      </motion.div>
+    </AnimatePresence>
   );
 }

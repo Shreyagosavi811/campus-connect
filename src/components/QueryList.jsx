@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
 import { db } from "../firebase";
 import QueryCard from "./QueryCard";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function QueryList() {
   const [queries, setQueries] = useState([]);
@@ -27,21 +28,30 @@ export default function QueryList() {
     return () => unsub();
   }, []);
 
-  const handleNotify = (notif) => {
-    console.log("Notification:", notif);
-  };
-
-  if (loading) return <p>Loading queries...</p>;
+  if (loading) return (
+    <div className="flex justify-center py-20">
+      <div className="w-10 h-10 border-4 border-slate-100 border-t-indigo-600 rounded-full animate-spin" />
+    </div>
+  );
 
   return (
-    <div className="query-list">
-      {queries.length === 0 ? (
-        <p>No queries posted yet.</p>
-      ) : (
-        queries.map((q) => (
-          <QueryCard key={q.id} query={q} onNotify={handleNotify} />
-        ))
-      )}
+    <div className="space-y-6">
+      <AnimatePresence mode="popLayout">
+        {queries.length === 0 ? (
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20 text-slate-400 italic">No queries posted yet.</motion.p>
+        ) : (
+          queries.map((q, idx) => (
+            <motion.div
+              key={q.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.05 }}
+            >
+              <QueryCard query={q} />
+            </motion.div>
+          ))
+        )}
+      </AnimatePresence>
     </div>
   );
 }

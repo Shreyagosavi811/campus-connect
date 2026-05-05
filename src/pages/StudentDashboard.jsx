@@ -1,16 +1,20 @@
-import { Container, Typography, Grid, Paper, Box, Avatar, Divider, Chip, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, Tooltip } from "@mui/material";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
-import PersonIcon from "@mui/icons-material/Person";
-import AssignmentIcon from "@mui/icons-material/Assignment";
-import EventIcon from "@mui/icons-material/Event";
-import SearchIcon from "@mui/icons-material/Search";
-import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
-import DownloadIcon from "@mui/icons-material/Download";
+import { motion } from "framer-motion";
 import { generateReceiptPDF } from "../utils/pdfGenerator";
-import "../styles/Home.css"; // Reuse some styles
+import ProfilePanel from "../components/ProfilePanel";
+
+const Icons = {
+  Person: () => <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>,
+  Wallet: () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>,
+  Download: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>,
+  Assignment: () => <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>,
+  Event: () => <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
+  Search: () => <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>,
+  User: () => <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+};
 
 export default function StudentDashboard() {
   const { user } = useAuth();
@@ -21,211 +25,159 @@ export default function StudentDashboard() {
   useEffect(() => {
     const userId = user?.id || JSON.parse(localStorage.getItem("user") || "{}")?.id;
     if (userId && userId !== "undefined") {
-      // Fetch Fee Summary
       axios.get(`http://localhost:8080/api/fees/user/${userId}`)
         .then(res => {
-          if (Array.isArray(res.data) && res.data.length > 0) {
-            setFeeRecord(res.data[0]);
-          } else if (res.data && !Array.isArray(res.data)) {
-            setFeeRecord(res.data);
-          }
+          if (Array.isArray(res.data) && res.data.length > 0) setFeeRecord(res.data[0]);
+          else if (res.data && !Array.isArray(res.data)) setFeeRecord(res.data);
         })
         .catch(err => console.error("Failed to fetch fees:", err));
 
-      // Fetch Transaction History
       axios.get(`http://localhost:8080/api/transactions/user/${userId}`)
-        .then(res => {
-          setTransactions(res.data);
-        })
+        .then(res => setTransactions(res.data))
         .catch(err => console.error("Failed to fetch transactions:", err));
     }
   }, [user]);
 
+  const quickLinks = [
+    { title: "Campus Notices", desc: "View latest announcements", path: "/notices", icon: <Icons.Assignment />, color: "text-indigo-600 bg-indigo-50" },
+    { title: "Upcoming Events", desc: "Register and RSVP", path: "/events", icon: <Icons.Event />, color: "text-sky-500 bg-sky-50" },
+    { title: "Lost & Found", desc: "Report or claim items", path: "/lostfound", icon: <Icons.Search />, color: "text-amber-500 bg-amber-50" },
+    { title: "Mentorship", desc: "Ask academic questions", path: "/queries", icon: <Icons.User />, color: "text-emerald-500 bg-emerald-50" }
+  ];
+
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }} className="fade-in">
-      <Typography variant="h4" sx={{ mb: 4, textAlign: "center", fontWeight: "bold", background: 'linear-gradient(135deg, #4F46E5, #0EA5E9)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <motion.h1 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-4xl font-black text-center mb-12 bg-gradient-to-r from-indigo-600 to-sky-500 bg-clip-text text-transparent uppercase tracking-tighter"
+      >
         Student Portal
-      </Typography>
+      </motion.h1>
 
-      <Grid container spacing={4}>
-        {/* Profile Section */}
-        <Grid item xs={12} md={4}>
-          <Paper className="glass-panel" sx={{ p: 4, textAlign: "center", height: "100%" }}>
-            <Avatar sx={{ mx: "auto", mb: 2, background: 'linear-gradient(135deg, #4F46E5, #0EA5E9)', width: 80, height: 80, boxShadow: '0 4px 14px 0 rgba(79, 70, 229, 0.39)' }}>
-              <PersonIcon sx={{ fontSize: 40 }} />
-            </Avatar>
-            <Typography variant="h5" fontWeight="bold" sx={{ color: '#1E293B' }}>
-              {user?.name || "Student Name"}
-            </Typography>
-            <Typography sx={{ color: '#475569', mb: 2 }}>{user?.email}</Typography>
-            
-            <Divider sx={{ my: 2 }} />
-            
-            <Box textAlign="left" sx={{ color: '#334155' }}>
-              <Typography sx={{ mb: 1 }}><strong>Department:</strong> {user?.department || "N/A"}</Typography>
-              <Typography sx={{ mb: 1 }}><strong>Year:</strong> {user?.year || "N/A"}</Typography>
-              <Typography><strong>Role:</strong> {user?.role}</Typography>
-            </Box>
-          </Paper>
-        </Grid>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Profile Card */}
+        <div className="lg:col-span-4">
+          <ProfilePanel />
+        </div>
 
-        {/* Right Side: Quick Links & Finance */}
-        <Grid item xs={12} md={8}>
+        {/* Main Content Area */}
+        <div className="lg:col-span-8 space-y-8">
           
           {/* Financial Overview */}
-          <Paper className="glass-panel" sx={{ p: 3, mb: 4 }}>
-            <Box display="flex" alignItems="center" gap={2} mb={3}>
-              <Avatar sx={{ bgcolor: 'rgba(16, 185, 129, 0.1)', color: '#10B981' }}>
-                <AccountBalanceWalletIcon />
-              </Avatar>
-              <Typography variant="h6" fontWeight="bold">Financial Overview</Typography>
-            </Box>
-            
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm"
+          >
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center">
+                <Icons.Wallet />
+              </div>
+              <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight">Financial Overview</h3>
+            </div>
+
             {feeRecord ? (
-              <Grid container spacing={3}>
-                <Grid item xs={12} sm={4}>
-                  <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'rgba(79, 70, 229, 0.05)', border: '1px solid rgba(79, 70, 229, 0.1)' }}>
-                    <Typography variant="body2" color="textSecondary">Total Fees</Typography>
-                    <Typography variant="h5" fontWeight="bold">₹{feeRecord.totalFees}</Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                  <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
-                    <Typography variant="body2" color="textSecondary">Paid Amount</Typography>
-                    <Typography variant="h5" fontWeight="bold" sx={{ color: '#10B981' }}>₹{feeRecord.paidFees}</Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                  <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'rgba(244, 63, 94, 0.05)', border: '1px solid rgba(244, 63, 94, 0.1)' }}>
-                    <Typography variant="body2" color="textSecondary">Outstanding</Typography>
-                    <Typography variant="h5" fontWeight="bold" sx={{ color: '#F43F5E' }}>₹{feeRecord.remainingFees}</Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={12} mt={2} display="flex" justifyContent="space-between" alignItems="center">
-                  <Typography variant="body2" color="textSecondary" component="div">
-                    Status: <Chip label={feeRecord.status} color={feeRecord.status === 'Paid' ? 'success' : 'warning'} size="small" />
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    Contact your department HOD to log payments.
-                  </Typography>
-                </Grid>
-              </Grid>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {[
+                  { label: "Total Fees", val: feeRecord.totalFees, color: "text-slate-900 bg-slate-50 border-slate-100" },
+                  { label: "Amount Paid", val: feeRecord.paidFees, color: "text-emerald-600 bg-emerald-50 border-emerald-100" },
+                  { label: "Outstanding", val: feeRecord.remainingFees, color: "text-rose-600 bg-rose-50 border-rose-100" }
+                ].map(stat => (
+                  <div key={stat.label} className={`p-4 rounded-2xl border ${stat.color}`}>
+                    <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">{stat.label}</p>
+                    <p className="text-2xl font-black">₹{stat.val.toLocaleString()}</p>
+                  </div>
+                ))}
+                <div className="col-span-full mt-4 flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
+                   <div className="flex items-center gap-2">
+                      <span className="text-xs font-black uppercase text-slate-400 tracking-widest">Status:</span>
+                      <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase ${feeRecord.status === 'Paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                        {feeRecord.status}
+                      </span>
+                   </div>
+                   <p className="text-[10px] font-bold text-slate-400 uppercase italic">Contact HOD for payment logs</p>
+                </div>
+              </div>
             ) : (
-              <Box textAlign="center" py={3}>
-                <Typography color="textSecondary">No fee records found for your account.</Typography>
-              </Box>
+              <p className="text-slate-400 italic text-center py-6">No fee records found for your account.</p>
             )}
-          </Paper>
+          </motion.div>
 
-          {/* Payment History Section */}
-          <Paper className="glass-panel" sx={{ p: 3, mb: 4 }}>
-            <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>Payment History</Typography>
+          {/* Payment History */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm"
+          >
+            <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight mb-6">Payment History</h3>
             {transactions.length > 0 ? (
-              <TableContainer sx={{ borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: 'none' }}>
-                <Table size="small">
-                  <TableHead sx={{ bgcolor: '#f8fafc' }}>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 'bold', color: '#475569' }}>Date</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', color: '#475569' }}>Type</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', color: '#475569' }}>Amount</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', color: '#475569' }}>Method</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', color: '#475569' }}>Transaction ID</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold', color: '#475569' }} align="center">Receipt</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
+              <div className="overflow-x-auto rounded-2xl border border-slate-100">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-100">
+                      <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
+                      <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Amount</th>
+                      <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Method</th>
+                      <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ref No</th>
+                      <th className="p-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Receipt</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
                     {transactions.map((t) => (
-                      <TableRow key={t.id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                        <TableCell sx={{ color: '#475569' }}>{new Date(t.date).toLocaleDateString()}</TableCell>
-                        <TableCell>
-                          <Chip 
-                            label={t.type} 
-                            size="small" 
-                            color={t.type === 'PAYMENT' ? 'success' : 'default'}
-                            variant="outlined"
-                          />
-                        </TableCell>
-                        <TableCell sx={{ fontWeight: 'bold', color: t.amount > 0 ? '#10B981' : 'inherit' }}>
-                          {t.amount > 0 ? `+ ₹${t.amount}` : '-'}
-                        </TableCell>
-                        <TableCell sx={{ color: '#475569' }}>{t.paymentMethod || 'Cash'}</TableCell>
-                        <TableCell sx={{ color: '#475569' }}>{t.referenceNumber ? t.referenceNumber : `TXN-${t.id}`}</TableCell>
-                        <TableCell align="center">
+                      <tr key={t.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="p-4 text-xs font-bold text-slate-600">{new Date(t.date).toLocaleDateString()}</td>
+                        <td className="p-4 text-center">
+                          <span className={`px-3 py-1 rounded-lg text-xs font-black ${t.amount > 0 ? 'bg-emerald-50 text-emerald-600' : 'text-slate-400'}`}>
+                            {t.amount > 0 ? `+ ₹${t.amount}` : '-'}
+                          </span>
+                        </td>
+                        <td className="p-4 text-xs font-medium text-slate-600">{t.paymentMethod || 'Cash'}</td>
+                        <td className="p-4 text-[10px] font-mono text-slate-400 uppercase">{t.referenceNumber ? t.referenceNumber : `TXN-${String(t.id || "").slice(-6)}`}</td>
+                        <td className="p-4 text-center">
                           {t.amount > 0 && (
-                            <Tooltip title="Download PDF Receipt">
-                              <IconButton color="primary" onClick={() => generateReceiptPDF(t, user, feeRecord)}>
-                                <DownloadIcon />
-                              </IconButton>
-                            </Tooltip>
+                            <button 
+                              onClick={() => generateReceiptPDF(t, user, feeRecord)}
+                              className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all active:scale-90"
+                              title="Download Receipt"
+                            >
+                              <Icons.Download />
+                            </button>
                           )}
-                        </TableCell>
-                      </TableRow>
+                        </td>
+                      </tr>
                     ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                  </tbody>
+                </table>
+              </div>
             ) : (
-              <Typography color="textSecondary" align="center" py={2}>No transactions recorded yet.</Typography>
+              <p className="text-slate-400 italic text-center py-6">No transactions recorded yet.</p>
             )}
-          </Paper>
+          </motion.div>
 
-          {/* Quick Links */}
-          <Grid container spacing={3}>
-            {/* Notices */}
-            <Grid item xs={12} sm={6}>
-              <Paper 
-                className="glass-panel"
-                sx={{ p: 3, textAlign: "center", cursor: "pointer", transition: "0.3s", "&:hover": { transform: "translateY(-5px)", boxShadow: '0 8px 30px rgba(0,0,0,0.1)' } }}
-                onClick={() => navigate("/notices")}
+          {/* Quick Links Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {quickLinks.map((link, idx) => (
+              <motion.div 
+                key={link.title}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.2 + idx * 0.05 }}
+                onClick={() => navigate(link.path)}
+                className="group p-6 bg-white rounded-3xl border border-slate-100 shadow-sm cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
               >
-                <AssignmentIcon sx={{ fontSize: 50, mb: 1, color: '#4F46E5' }} />
-                <Typography variant="h6" fontWeight="bold">Campus Notices</Typography>
-                <Typography variant="body2" color="textSecondary">View latest announcements</Typography>
-              </Paper>
-            </Grid>
+                <div className={`w-20 h-20 rounded-2xl flex items-center justify-center mb-4 shadow-inner ${link.color} group-hover:scale-110 transition-transform duration-300`}>
+                   {link.icon}
+                </div>
+                <h4 className="text-lg font-black text-slate-800 tracking-tight">{link.title}</h4>
+                <p className="text-slate-400 text-xs font-medium">{link.desc}</p>
+              </motion.div>
+            ))}
+          </div>
 
-            {/* Events */}
-            <Grid item xs={12} sm={6}>
-              <Paper 
-                className="glass-panel"
-                sx={{ p: 3, textAlign: "center", cursor: "pointer", transition: "0.3s", "&:hover": { transform: "translateY(-5px)", boxShadow: '0 8px 30px rgba(0,0,0,0.1)' } }}
-                onClick={() => navigate("/events")}
-              >
-                <EventIcon sx={{ fontSize: 50, mb: 1, color: '#0EA5E9' }} />
-                <Typography variant="h6" fontWeight="bold">Upcoming Events</Typography>
-                <Typography variant="body2" color="textSecondary">Register and RSVP</Typography>
-              </Paper>
-            </Grid>
-
-            {/* Lost and Found */}
-            <Grid item xs={12} sm={6}>
-              <Paper 
-                className="glass-panel"
-                sx={{ p: 3, textAlign: "center", cursor: "pointer", transition: "0.3s", "&:hover": { transform: "translateY(-5px)", boxShadow: '0 8px 30px rgba(0,0,0,0.1)' } }}
-                onClick={() => navigate("/lostfound")}
-              >
-                <SearchIcon sx={{ fontSize: 50, mb: 1, color: '#F59E0B' }} />
-                <Typography variant="h6" fontWeight="bold">Lost & Found</Typography>
-                <Typography variant="body2" color="textSecondary">Report or claim items</Typography>
-              </Paper>
-            </Grid>
-
-            {/* Queries / Mentorship */}
-            <Grid item xs={12} sm={6}>
-              <Paper 
-                className="glass-panel"
-                sx={{ p: 3, textAlign: "center", cursor: "pointer", transition: "0.3s", "&:hover": { transform: "translateY(-5px)", boxShadow: '0 8px 30px rgba(0,0,0,0.1)' } }}
-                onClick={() => navigate("/queries")}
-              >
-                <PersonIcon sx={{ fontSize: 50, mb: 1, color: '#10B981' }} />
-                <Typography variant="h6" fontWeight="bold">Mentorship</Typography>
-                <Typography variant="body2" color="textSecondary">Ask questions to teachers</Typography>
-              </Paper>
-            </Grid>
-          </Grid>
-
-        </Grid>
-      </Grid>
-    </Container>
+        </div>
+      </div>
+    </div>
   );
 }

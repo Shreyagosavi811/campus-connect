@@ -1,19 +1,10 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import {
-  Container,
-  Typography,
-  Grid,
-  Paper,
-  TextField,
-  MenuItem,
-  Chip,
-  Box,
-  Button,
-} from "@mui/material";
 import CountUp from "react-countup";
-import "../styles/AdminDashboard.css";
+import { motion, AnimatePresence } from "framer-motion";
+import ProfilePanel from "../components/ProfilePanel";
+import { FeeChart, DemographicPie } from "../components/StatsCharts";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -22,38 +13,39 @@ export default function AdminDashboard() {
   const [roleFilter, setRoleFilter] = useState("");
   const [deptFilter, setDeptFilter] = useState("");
 
+  const [fees, setFees] = useState([]);
+
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchData = async () => {
       try {
-        const res = await axios.get("http://localhost:8080/api/users");
-        setUsers(res.data);
+        const [uRes, fRes] = await Promise.all([
+          axios.get("http://localhost:8080/api/users"),
+          axios.get("http://localhost:8080/api/fees")
+        ]);
+        setUsers(uRes.data);
+        setFees(fRes.data);
       } catch (error) {
-        console.error("Failed to fetch users:", error);
+        console.error("Failed to fetch data:", error);
       }
     };
-    fetchUsers();
+    fetchData();
   }, []);
 
-  // ✅ FIX 1: SAFE NORMALIZATION (NO CRASH)
   const normalizedUsers = users.map((u) => ({
     ...u,
     role: u.role ? u.role.toString().trim().toLowerCase() : "",
     department: u.department ? u.department.toString().trim().toLowerCase() : "not assigned",
   }));
 
-  // 🔍 FILTER LOGIC
   const filteredUsers = normalizedUsers.filter((u) => {
     const matchesSearch =
       u.name?.toLowerCase().includes(search.toLowerCase()) ||
       u.email?.toLowerCase().includes(search.toLowerCase());
-
     const matchesRole = roleFilter ? u.role === roleFilter : true;
     const matchesDept = deptFilter ? u.department === deptFilter : true;
-
     return matchesSearch && matchesRole && matchesDept;
   });
 
-  // 📊 FIX 2: STATS SHOULD USE ALL USERS (NOT FILTERED)
   const stats = {
     totalUsers: normalizedUsers.length,
     totalHOD: normalizedUsers.filter((u) => u.role === "hod").length,
@@ -62,23 +54,21 @@ export default function AdminDashboard() {
     totalPending: normalizedUsers.filter((u) => !u.approved).length,
   };
 
-  const statCards = [
-    { label: "Total Users", count: stats.totalUsers, color: "#4f46e5" },
-    { label: "Total HODs", count: stats.totalHOD, color: "#16a34a" },
-    { label: "Total Teachers", count: stats.totalTeachers, color: "#f59e0b" },
-    { label: "Total Students", count: stats.totalStudents, color: "#e11d48" },
-    { label: "Pending Approval", count: stats.totalPending, color: "#0ea5e9" },
-    { label: "Fees Management", count: stats.totalStudents, color: "#8b5cf6", path: "/fees" },
+  const financialStats = [
+    { name: 'Paid', value: fees.reduce((acc, f) => acc + (Number(f.paidFees) || 0), 0) },
+    { name: 'Pending', value: fees.reduce((acc, f) => acc + (Number(f.remainingFees) || 0), 0) }
   ];
 
-  // 📌 FIX 3: REMOVE INVALID DEPARTMENT VALUES
-  const departments = [
-    ...new Set(
-      users
-        .map((u) => u.department)
-        .filter((dept) => dept && dept !== "")
-    ),
+  const statCards = [
+    { label: "Total Users", count: stats.totalUsers, color: "border-indigo-600", textColor: "text-indigo-600" },
+    { label: "Total HODs", count: stats.totalHOD, color: "border-emerald-600", textColor: "text-emerald-600" },
+    { label: "Total Teachers", count: stats.totalTeachers, color: "border-amber-600", textColor: "text-amber-600" },
+    { label: "Total Students", count: stats.totalStudents, color: "border-rose-600", textColor: "text-rose-600" },
+    { label: "Pending", count: stats.totalPending, color: "border-sky-600", textColor: "text-sky-600" },
+    { label: "Fees", count: stats.totalStudents, color: "border-violet-600", textColor: "text-violet-600", path: "/fees" },
   ];
+
+  const departments = [...new Set(users.map((u) => u.department).filter((dept) => dept && dept !== ""))];
 
   const clearFilters = () => {
     setSearch("");
@@ -87,118 +77,146 @@ export default function AdminDashboard() {
   };
 
   return (
-    <Container sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" sx={{ mb: 3, textAlign: "center" }}>
-        Admin Dashboard
-      </Typography>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
+        <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase mb-2">Admin <span className="text-indigo-600">Overview</span></h1>
+        <p className="text-slate-400 font-bold tracking-widest text-[10px] uppercase">Control Center & Statistics</p>
+      </motion.div>
 
-      <TextField
-        fullWidth
-        label="Search users by name or email..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        sx={{ mb: 2 }}
-      />
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-10">
+        {/* Profile Card */}
+        <div className="lg:col-span-4">
+           <ProfilePanel />
+        </div>
 
-      <Grid container spacing={2} sx={{ mb: 2 }}>
-        <Grid item xs={12} sm={6}>
-          <TextField
-            select
-            fullWidth
-            label="Filter by Role"
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-          >
-            <MenuItem value="">All</MenuItem>
-            <MenuItem value="hod">HOD</MenuItem>
-            <MenuItem value="teacher">Teacher</MenuItem>
-            <MenuItem value="student">Student</MenuItem>
-            <MenuItem value="admin">Admin</MenuItem>
-          </TextField>
-        </Grid>
-
-        <Grid item xs={12} sm={6}>
-          <TextField
-            select
-            fullWidth
-            label="Filter by Department"
-            value={deptFilter}
-            onChange={(e) => setDeptFilter(e.target.value)}
-          >
-            <MenuItem value="">All</MenuItem>
-            {departments.map((dept, i) => (
-              <MenuItem key={i} value={dept}>
-                {dept}
-              </MenuItem>
+        {/* Stats Grid */}
+        <div className="lg:col-span-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 h-full">
+            {statCards.map((card, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: i * 0.05 }}
+                whileHover={{ y: -5 }}
+                onClick={() => card.path && navigate(card.path)}
+                className={`bg-white p-6 rounded-3xl border-t-8 ${card.color} shadow-sm hover:shadow-xl transition-all cursor-${card.path ? 'pointer' : 'default'} flex flex-col justify-center text-center`}
+              >
+                <p className="text-[10px] font-black text-slate-400 uppercase mb-1">{card.label}</p>
+                <h2 className={`text-3xl font-black ${card.textColor}`}>
+                  <CountUp end={card.count} duration={1.5} />
+                </h2>
+              </motion.div>
             ))}
-          </TextField>
-        </Grid>
-      </Grid>
+          </div>
+        </div>
+      </div>
 
-      <Box sx={{ mb: 2 }}>
-        {search && <Chip label={`Search: ${search}`} sx={{ mr: 1 }} />}
-        {roleFilter && <Chip label={`Role: ${roleFilter}`} sx={{ mr: 1 }} />}
-        {deptFilter && <Chip label={`Dept: ${deptFilter}`} sx={{ mr: 1 }} />}
+      {/* Analytics Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+           <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight mb-6 flex items-center gap-2">
+             <span className="w-1.5 h-6 bg-indigo-600 rounded-full" />
+             Financial Health (Global)
+           </h3>
+           <DemographicPie data={financialStats} />
+        </div>
+        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+           <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight mb-6 flex items-center gap-2">
+             <span className="w-1.5 h-6 bg-emerald-500 rounded-full" />
+             System Demographics
+           </h3>
+           <DemographicPie data={[
+             { name: 'Students', value: stats.totalStudents },
+             { name: 'Teachers', value: stats.totalTeachers },
+             { name: 'HODs', value: stats.totalHOD }
+           ]} />
+        </div>
+      </div>
+
+      {/* Filters Section */}
+      <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="col-span-1 md:col-span-1">
+             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 mb-1 block">Search Users</label>
+             <input 
+               type="text" 
+               placeholder="Name or email..."
+               value={search}
+               onChange={(e) => setSearch(e.target.value)}
+               className="w-full px-6 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600 transition-all text-sm font-medium"
+             />
+          </div>
+          <div>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 mb-1 block">Role Filter</label>
+            <select
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+              className="w-full px-6 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600 transition-all text-sm font-medium"
+            >
+              <option value="">All Roles</option>
+              <option value="hod">HOD</option>
+              <option value="teacher">Teacher</option>
+              <option value="student">Student</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 mb-1 block">Department</label>
+            <select
+              value={deptFilter}
+              onChange={(e) => setDeptFilter(e.target.value)}
+              className="w-full px-6 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600 transition-all text-sm font-medium"
+            >
+              <option value="">All Departments</option>
+              {departments.map((dept, i) => <option key={i} value={dept}>{dept}</option>)}
+            </select>
+          </div>
+        </div>
 
         {(search || roleFilter || deptFilter) && (
-          <Button size="small" color="error" onClick={clearFilters}>
-            Clear Filters
-          </Button>
+          <div className="mt-6 flex flex-wrap items-center gap-2">
+             <span className="text-xs font-bold text-slate-400 mr-2 uppercase">Active Filters:</span>
+             {search && <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-bold">Search: {search}</span>}
+             {roleFilter && <span className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-bold uppercase">{roleFilter}</span>}
+             {deptFilter && <span className="px-3 py-1 bg-amber-50 text-amber-600 rounded-lg text-xs font-bold">{deptFilter}</span>}
+             <button onClick={clearFilters} className="text-rose-600 text-xs font-black uppercase ml-2 hover:underline">Clear All</button>
+          </div>
         )}
-      </Box>
+      </div>
 
-      <Grid container spacing={3}>
-        {statCards.map((card, i) => (
-          <Grid size={{ xs: 12, sm: 6, md: 2.4 }} key={i}>
-            <Paper
-              className="stats-card"
-              style={{
-                borderTop: `5px solid ${card.color}`,
-                textAlign: "center",
-                padding: "20px",
-                borderRadius: "12px",
-                cursor: card.path ? "pointer" : "default"
-              }}
-              elevation={6}
-              onClick={() => card.path && navigate(card.path)}
-            >
-              <Typography variant="subtitle1">{card.label}</Typography>
-              <Typography variant="h4" style={{ color: card.color }}>
-                <CountUp end={card.count} duration={1.5} />
-              </Typography>
-            </Paper>
-          </Grid>
-        ))}
-      </Grid>
-
+      {/* Results Section */}
       {(search || roleFilter || deptFilter) && (
-        <Grid container spacing={3} sx={{ mt: 4 }}>
-          {filteredUsers.length > 0 ? (
-            filteredUsers.map((user) => (
-              <Grid size={{ xs: 12, sm: 6, md: 4 }} key={user.id}>
-                <Paper sx={{ p: 2, borderRadius: 3 }}>
-                  <Typography variant="h6">{user.name || "No Name"}</Typography>
-                  <Typography>{user.email}</Typography>
-                  <Typography>Role: {user.role}</Typography>
-                  <Typography>Dept: {user.department}</Typography>
-                  <Typography
-                    sx={{
-                      color: user.approved ? "green" : "red",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {user.approved ? "Approved" : "Pending"}
-                  </Typography>
-                </Paper>
-              </Grid>
-            ))
-          ) : (
-            <Typography sx={{ mt: 3, width: "100%", textAlign: "center" }}>
-              No users found
-            </Typography>
-          )}
-        </Grid>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <AnimatePresence>
+            {filteredUsers.length > 0 ? (
+              filteredUsers.map((user) => (
+                <motion.div
+                  key={user.id}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all"
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <h3 className="text-lg font-black text-slate-800 tracking-tight">{user.name || "Anonymous"}</h3>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${user.approved ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                      {user.approved ? "Approved" : "Pending"}
+                    </span>
+                  </div>
+                  <p className="text-slate-500 text-sm mb-4 font-medium">{user.email}</p>
+                  <div className="flex gap-2">
+                    <span className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px] font-black uppercase">{user.role}</span>
+                    <span className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px] font-black uppercase">{user.department}</span>
+                  </div>
+                </motion.div>
+              ))
+            ) : (
+              <div className="col-span-full py-20 text-center text-slate-400 italic">No users matching your criteria.</div>
+            )}
+          </AnimatePresence>
+        </div>
       )}
-    </Container>
+    </div>
   );
 }
