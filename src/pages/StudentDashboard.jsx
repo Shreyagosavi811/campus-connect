@@ -5,6 +5,7 @@ import axios from "axios";
 import { motion } from "framer-motion";
 import { generateReceiptPDF } from "../utils/pdfGenerator";
 import ProfilePanel from "../components/ProfilePanel";
+import api from "../utils/api";
 
 const Icons = {
   Person: () => <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>,
@@ -25,14 +26,14 @@ export default function StudentDashboard() {
   useEffect(() => {
     const userId = user?.id || JSON.parse(localStorage.getItem("user") || "{}")?.id;
     if (userId && userId !== "undefined") {
-      axios.get(`http://localhost:8080/api/fees/user/${userId}`)
+      api.get(`/api/fees/user/${userId}`)
         .then(res => {
           if (Array.isArray(res.data) && res.data.length > 0) setFeeRecord(res.data[0]);
           else if (res.data && !Array.isArray(res.data)) setFeeRecord(res.data);
         })
         .catch(err => console.error("Failed to fetch fees:", err));
 
-      axios.get(`http://localhost:8080/api/transactions/user/${userId}`)
+      api.get(`/api/transactions/user/${userId}`)
         .then(res => setTransactions(res.data))
         .catch(err => console.error("Failed to fetch transactions:", err));
     }

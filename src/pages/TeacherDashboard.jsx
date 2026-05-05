@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import CountUp from "react-countup";
 import { motion } from "framer-motion";
 import ProfilePanel from "../components/ProfilePanel";
+import api from "../utils/api";
 
 export default function TeacherDashboard() {
   const navigate = useNavigate();
@@ -15,7 +16,7 @@ export default function TeacherDashboard() {
     if (!user?.department) return;
     const fetchStudents = async () => {
       try {
-        const res = await axios.get("http://localhost:8080/api/users");
+        const res = await api.get("/api/users");
         const deptStudents = res.data.filter(u => 
           u.department === user.department && u.role?.toUpperCase() === "STUDENT"
         );

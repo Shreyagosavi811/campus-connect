@@ -6,6 +6,7 @@ import FloatingBlobs from "../components/FloatingBlobs";
 import { useToast } from "../context/ToastContext";
 import Logo from "../components/Logo";
 import OTPOverlay from "../components/OTPOverlay";
+import api from "../utils/api";
 
 export default function Login() {
   const { setUser } = useAuth();
@@ -32,24 +33,8 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:8080/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const text = await res.text();
-      let data = {};
-      try {
-        data = JSON.parse(text);
-      } catch (e) {
-        data = { message: text };
-      }
-
-      if (!res.ok) {
-        addToast(data.message || "Login failed", "error");
-        return;
-      }
+      const res = await api.post("/api/auth/login", { email, password });
+      const data = res.data;
 
       const role = data.role?.trim().toUpperCase();
       localStorage.setItem("token", data.token);

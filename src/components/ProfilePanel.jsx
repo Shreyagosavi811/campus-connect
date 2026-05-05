@@ -2,7 +2,7 @@ import React, { useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { uploadImageToImgBB } from "../utils/imageUpload";
-import axios from "axios";
+import api from "../utils/api";
 import { motion } from "framer-motion";
 
 export default function ProfilePanel() {
@@ -33,10 +33,8 @@ export default function ProfilePanel() {
       const imageURL = await uploadImageToImgBB(file);
       
       // Update in backend
-      const API_USERS = "http://localhost:8080/api/users";
       const updatedUser = { ...user, profileURL: imageURL };
-      
-      await axios.put(`${API_USERS}/${user.id}`, updatedUser);
+      await api.put(`/api/users/${user.id}`, updatedUser);
       
       // Update in local state
       setUser(updatedUser);

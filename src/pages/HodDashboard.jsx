@@ -6,6 +6,7 @@ import CountUp from "react-countup";
 import { motion } from "framer-motion";
 import ProfilePanel from "../components/ProfilePanel";
 import { DemographicPie, UserActivityBar } from "../components/StatsCharts";
+import api from "../utils/api";
 
 export default function HodDashboard() {
   const navigate = useNavigate();
@@ -14,7 +15,7 @@ export default function HodDashboard() {
 
   const fetchUsers = async () => {
     try {
-      const res = await axios.get("http://localhost:8080/api/users");
+      const res = await api.get("/api/users");
       const deptUsers = res.data.filter(u => 
         u.department === user.department && 
         (u.role?.toUpperCase() === "TEACHER" || u.role?.toUpperCase() === "STUDENT")

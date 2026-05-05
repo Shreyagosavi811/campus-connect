@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../utils/api";
 import { useAuth } from "../context/AuthContext";
 import emailjs from "emailjs-com";
 import { motion, AnimatePresence } from "framer-motion";
@@ -29,12 +29,12 @@ export default function TeacherUserManagement() {
   const [yearFilter, setYearFilter] = useState("");
 
   const years = ["1", "2", "3", "4"];
-  const API = "http://localhost:8080/api/users";
+  const API = "/api/users";
 
   const fetchStudents = async () => {
     if (!user?.department) return;
     try {
-      const res = await axios.get(API);
+      const res = await api.get(API);
       const deptStudents = res.data.filter(u => 
         u.department === user.department && u.role === "STUDENT"
       );
@@ -64,7 +64,7 @@ export default function TeacherUserManagement() {
     if (!form.name || !form.email || !form.year) return alert("All fields required");
     const password = Math.random().toString(36).slice(-8);
     try {
-      await axios.post(API, { ...form, role: "STUDENT", department: user.department, approved: false, password });
+      await api.post(API, { ...form, department: user.department, role: "STUDENT", password, approved: false });
       emailjs.send("service_ydtu7jp", "template_etypntv", { name: form.name, email: form.email, password }, "NN3gMWSv34ggrAvsV");
       setForm({ name: "", email: "", year: "" });
       fetchStudents();
@@ -74,7 +74,7 @@ export default function TeacherUserManagement() {
   const handleUpdate = async () => {
     if (!editStudent) return;
     try {
-      await axios.put(`${API}/${editStudent.id}`, editStudent);
+      await api.put(`${API}/${editStudent.id}`, editStudent);
       setEditStudent(null);
       fetchStudents();
     } catch (error) { console.error("Failed to update student:", error); }
@@ -82,12 +82,12 @@ export default function TeacherUserManagement() {
 
   const handleDelete = async (id) => {
     if (window.confirm("Delete student?")) {
-      try { await axios.delete(`${API}/${id}`); fetchStudents(); } catch (error) { console.error("Failed to delete student:", error); }
+      try { await api.delete(`${API}/${id}`); fetchStudents(); } catch (error) { console.error("Failed to delete student:", error); }
     }
   };
 
   const handleApprove = async (id) => {
-    try { await axios.put(`${API}/${id}/approve`); fetchStudents(); } catch (error) { console.error("Failed to approve student:", error); }
+    try { await api.put(`${API}/${id}/approve`); fetchStudents(); } catch (error) { console.error("Failed to approve student:", error); }
   };
 
   const approvedStudents = applyFilters(students.filter(s => s.approved));

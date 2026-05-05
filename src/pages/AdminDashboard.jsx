@@ -5,6 +5,7 @@ import CountUp from "react-countup";
 import { motion, AnimatePresence } from "framer-motion";
 import ProfilePanel from "../components/ProfilePanel";
 import { FeeChart, DemographicPie } from "../components/StatsCharts";
+import api from "../utils/api";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -19,8 +20,8 @@ export default function AdminDashboard() {
     const fetchData = async () => {
       try {
         const [uRes, fRes] = await Promise.all([
-          axios.get("http://localhost:8080/api/users"),
-          axios.get("http://localhost:8080/api/fees")
+          api.get("/api/users"),
+          api.get("/api/fees")
         ]);
         setUsers(uRes.data);
         setFees(fRes.data);
