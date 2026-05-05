@@ -117,7 +117,7 @@ export default function Navbar() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed top-0 right-0 bottom-0 w-72 bg-white/90 backdrop-blur-2xl shadow-2xl z-50 md:hidden p-6"
+              className="fixed top-0 right-0 bottom-0 w-72 bg-white/60 backdrop-blur-3xl shadow-2xl z-50 md:hidden p-6 border-l border-white/20"
             >
               <div className="flex justify-end mb-8">
                 <button onClick={toggleMobileMenu} className="p-2 text-slate-400 hover:text-slate-600">
@@ -134,13 +134,14 @@ export default function Navbar() {
                     to={link.path}
                     onClick={toggleMobileMenu}
                     className={({ isActive }) => 
-                      `px-6 py-4 rounded-2xl text-lg font-black tracking-tight transition-all ${
+                      `px-6 py-4 rounded-2xl text-lg font-black tracking-tight transition-all flex items-center gap-3 ${
                         isActive 
-                          ? "bg-indigo-100 text-indigo-600 translate-x-2" 
-                          : "text-slate-500 hover:bg-slate-50"
+                          ? "bg-indigo-600/10 text-indigo-600 border border-indigo-200/50 translate-x-2" 
+                          : "text-slate-500 hover:bg-white/40 hover:text-slate-900"
                       }`
                     }
                   >
+                    <span className={`w-1.5 h-1.5 rounded-full ${link.path === window.location.pathname ? 'bg-indigo-600' : 'bg-slate-300'}`} />
                     {link.label}
                   </NavLink>
                 ))}

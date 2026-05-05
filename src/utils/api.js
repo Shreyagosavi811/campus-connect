@@ -3,7 +3,9 @@ import axios from 'axios';
 // The base URL for the backend API
 // In development, it defaults to localhost:8080
 // In production (Vercel), it will use the environment variable VITE_API_BASE_URL
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+const rawURL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+// Normalize by removing trailing slash if exists
+const API_BASE_URL = rawURL.endsWith('/') ? rawURL.slice(0, -1) : rawURL;
 
 const api = axios.create({
   baseURL: API_BASE_URL,
