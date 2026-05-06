@@ -34,7 +34,12 @@ public class JwtFilter extends OncePerRequestFilter {
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             token = authHeader.substring(7);
-            email = jwtUtil.extractEmail(token);
+            try {
+                email = jwtUtil.extractEmail(token);
+            } catch (Exception e) {
+                // Ignore expired or invalid tokens - let the request proceed (e.g. to login)
+                System.out.println(">>> Filter ignored invalid/expired token");
+            }
         }
 
         if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
