@@ -59,7 +59,10 @@ export default function Login() {
 
     } catch (err) {
       console.error(err);
-      const msg = err.response?.data || "Server connection failed";
+      const serverData = err.response?.data;
+      const msg = typeof serverData === 'string' 
+        ? serverData 
+        : serverData?.message || serverData?.error || "Server connection failed";
       addToast(msg, "error");
     } finally {
       setLoading(false);
