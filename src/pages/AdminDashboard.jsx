@@ -115,23 +115,27 @@ export default function AdminDashboard() {
 
       {/* Analytics Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
-        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm min-h-[450px]">
            <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight mb-6 flex items-center gap-2">
              <span className="w-1.5 h-6 bg-indigo-600 rounded-full" />
              Financial Health (Global)
            </h3>
-           <DemographicPie data={financialStats} />
+           <div className="h-[300px]">
+              <DemographicPie data={financialStats} />
+           </div>
         </div>
-        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm min-h-[450px]">
            <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight mb-6 flex items-center gap-2">
              <span className="w-1.5 h-6 bg-emerald-500 rounded-full" />
              System Demographics
            </h3>
-           <DemographicPie data={[
-             { name: 'Students', value: stats.totalStudents },
-             { name: 'Teachers', value: stats.totalTeachers },
-             { name: 'HODs', value: stats.totalHOD }
-           ]} />
+           <div className="h-[300px]">
+              <DemographicPie data={[
+                { name: 'Students', value: stats.totalStudents },
+                { name: 'Teachers', value: stats.totalTeachers },
+                { name: 'HODs', value: stats.totalHOD }
+              ]} />
+           </div>
         </div>
       </div>
 

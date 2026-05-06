@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import apiClient from '../api/apiClient';
+import api from '../utils/api';
 
 export const useFinanceData = (user) => {
   const [students, setStudents] = useState([]);
@@ -14,8 +14,8 @@ export const useFinanceData = (user) => {
     setError(null);
     try {
       const [usersRes, feesRes] = await Promise.all([
-        apiClient.get('/users'),
-        apiClient.get('/fees')
+        api.get('/api/users'),
+        api.get('/api/fees')
       ]);
 
       const allUsers = Array.isArray(usersRes.data) ? usersRes.data : [];
@@ -43,7 +43,7 @@ export const useFinanceData = (user) => {
   const toggleUserAccess = async (targetUser) => {
     try {
       const updatedUser = { ...targetUser, financeAccess: !targetUser.financeAccess };
-      await apiClient.put(`/users/${targetUser.id}`, updatedUser);
+      await api.put(`/api/users/${targetUser.id}`, updatedUser);
       await fetchData(); // Refresh
       return true;
     } catch (e) {
@@ -54,7 +54,7 @@ export const useFinanceData = (user) => {
 
   const getStudentTransactions = async (studentId) => {
     try {
-      const res = await apiClient.get(`/transactions/user/${studentId}`);
+      const res = await api.get(`/api/transactions/user/${studentId}`);
       return res.data;
     } catch (e) {
       console.error("Failed to fetch transactions", e);
@@ -64,7 +64,7 @@ export const useFinanceData = (user) => {
 
   const assignFee = async (feeData) => {
     try {
-      await apiClient.post('/fees', feeData);
+      await api.post('/api/fees', feeData);
       await fetchData();
       return true;
     } catch (e) {
@@ -75,7 +75,7 @@ export const useFinanceData = (user) => {
 
   const logPayment = async (feeId, paymentData) => {
     try {
-      await apiClient.put(`/fees/${feeId}`, paymentData);
+      await api.put(`/api/fees/${feeId}`, paymentData);
       await fetchData();
       return true;
     } catch (e) {

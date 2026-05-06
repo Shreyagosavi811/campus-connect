@@ -46,13 +46,35 @@ export default function AdminUserManagement() {
 
   const handleAdd = async () => {
     if (!form.name || !form.email || !form.role || !form.department) return alert("Fields missing");
-    const password = Math.random().toString(36).slice(-8);
+    
+    // Default password based on role
+    const defaultPassword = `${form.role.toLowerCase()}123`;
+    
     try {
-      await api.post(API_USERS, { ...form, role: form.role.toUpperCase(), password, approved: false });
-      emailjs.send("service_ydtu7jp", "template_etypntv", { name: form.name, email: form.email, password }, "NN3gMWSv34ggrAvsV");
+      await api.post(API_USERS, { 
+        ...form, 
+        role: form.role.toUpperCase(), 
+        password: defaultPassword, 
+        approved: false 
+      });
+      
+      // Still try to send email, but user can always use the default
+      try {
+        emailjs.send("service_ydtu7jp", "template_etypntv", { 
+          name: form.name, 
+          email: form.email, 
+          password: defaultPassword 
+        }, "NN3gMWSv34ggrAvsV");
+      } catch (emailErr) {
+        console.warn("Email could not be sent, but user was created with default password:", defaultPassword);
+      }
+
       setForm({ name: "", email: "", role: "Student", department: "", year: "" });
       fetchData();
-    } catch (e) { alert("Error adding user"); }
+      alert(`User added! Default password is: ${defaultPassword}`);
+    } catch (e) { 
+      alert("Error adding user. Make sure the email is unique."); 
+    }
   };
 
   const handleUpdate = async () => {
@@ -73,13 +95,22 @@ export default function AdminUserManagement() {
     }
   };
 
-  const tabs = ["HODs", "Teachers", "Students", "Approvals"];
+  const tabs = [
+    { name: "HODs", count: users.filter(u => u.role?.toUpperCase() === "HOD").length },
+    { name: "Teachers", count: users.filter(u => u.role?.toUpperCase() === "TEACHER").length },
+    { name: "Students", count: users.filter(u => u.role?.toUpperCase() === "STUDENT").length },
+    { name: "Approvals", count: users.filter(u => !u.approved).length, badge: true }
+  ];
+
   const filteredData = [
     users.filter(u => u.role?.toUpperCase() === "HOD"),
     users.filter(u => u.role?.toUpperCase() === "TEACHER"),
     users.filter(u => u.role?.toUpperCase() === "STUDENT"),
     users.filter(u => !u.approved)
   ];
+
+  const departments = ["Computer", "IT", "Electrical", "Civil", "Mechanical"];
+  const years = ["FE", "SE", "TE", "BE", "All", "Staff"];
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -93,7 +124,6 @@ export default function AdminUserManagement() {
               {[
                 { label: "Full Name", key: "name", type: "text", placeholder: "John Doe" },
                 { label: "Email Address", key: "email", type: "email", placeholder: "john@university.edu" },
-                { label: "Department", key: "department", type: "text", placeholder: "Computer Science" }
               ].map(field => (
                 <div key={field.key}>
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 mb-1 block">{field.label}</label>
@@ -106,6 +136,32 @@ export default function AdminUserManagement() {
                   />
                 </div>
               ))}
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 mb-1 block">Department</label>
+                  <select
+                    value={form.department}
+                    onChange={e => setForm({...form, department: e.target.value})}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600 transition-all text-sm font-medium"
+                  >
+                    <option value="">Select...</option>
+                    {departments.map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 mb-1 block">Year</label>
+                  <select
+                    value={form.year}
+                    onChange={e => setForm({...form, year: e.target.value})}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600 transition-all text-sm font-medium"
+                  >
+                    <option value="">Select...</option>
+                    {years.map(y => <option key={y} value={y}>{y}</option>)}
+                  </select>
+                </div>
+              </div>
+
               <div>
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 mb-1 block">Role</label>
                 <select
@@ -137,11 +193,16 @@ export default function AdminUserManagement() {
                   <button 
                     key={i} 
                     onClick={() => setTabIndex(i)}
-                    className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-tight whitespace-nowrap transition-all ${
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-tight whitespace-nowrap transition-all flex items-center gap-2 ${
                       tabIndex === i ? "bg-white text-indigo-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
                     }`}
                   >
-                    {t}
+                    {t.name}
+                    <span className={`px-1.5 py-0.5 rounded-md text-[8px] ${
+                      tabIndex === i ? (t.badge ? "bg-rose-500 text-white" : "bg-indigo-100 text-indigo-600") : "bg-slate-200 text-slate-500"
+                    }`}>
+                      {t.count}
+                    </span>
                   </button>
                 ))}
               </div>
