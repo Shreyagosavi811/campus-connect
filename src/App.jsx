@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { ToastProvider } from "./context/ToastContext";
@@ -5,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 import PrivateRoute from "./routes/PrivateRoute";
 import Navbar from "./components/Navbar";
+import LoadingScreen from "./components/LoadingScreen";
 import Login from "./pages/Login";
 import Home from "./pages/Home";
 
@@ -36,12 +38,32 @@ export default function App() {
       <ToastProvider>
         <Router>
           <div className="min-h-screen bg-slate-50 selection:bg-indigo-100 selection:text-indigo-900">
-            <Navbar />
-            <AnimatedRoutes />
+            <AppContent />
           </div>
         </Router>
       </ToastProvider>
     </AuthProvider>
+  );
+}
+
+function AppContent() {
+  const [isLoading, setIsLoading] = useState(true);
+  const location = useLocation();
+  const isLoginPage = location.pathname === "/";
+
+  useEffect(() => {
+    // Initial loading delay for brand visibility
+    const timer = setTimeout(() => setIsLoading(false), 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (isLoading) return <LoadingScreen />;
+
+  return (
+    <>
+      {!isLoginPage && <Navbar />}
+      <AnimatedRoutes />
+    </>
   );
 }
 
